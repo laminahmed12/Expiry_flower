@@ -1,0 +1,6 @@
+{
+  "name": "تنبيه الصلاحية",
+  "description": "نظام شامل لإدارة ومتابعة تواريخ صلاحية الأغذية والأدوية والمواد الاستهلاكية مع تنبيهات صوتية وذكية ونظام تراخيص.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
