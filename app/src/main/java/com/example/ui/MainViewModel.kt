@@ -90,6 +90,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val logoTapCount: StateFlow<Int> = _logoTapCount.asStateFlow()
 
     private val _showPasscodeDialog = MutableStateFlow(false)
+    private var ownerCredential: String = ""
     val showPasscodeDialog: StateFlow<Boolean> = _showPasscodeDialog.asStateFlow()
 
     // User Feedback Messages (Snackbar / Toast)
@@ -204,6 +205,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun verifyPasscodeAndOpenAdmin(enteredPasscode: String): Boolean {
         return if (enteredPasscode.trim() == ItemRepository.SECRET_ADMIN_PASSCODE) {
+            ownerCredential = enteredPasscode.trim()
             _showPasscodeDialog.value = false
             navigateTo(Screen.ADREEMK_ADMIN)
             true
@@ -292,7 +294,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // --- Admin panel actions ---
     fun generateNewCode(months: Int, note: String, onGenerated: (ActivationCode) -> Unit) {
         viewModelScope.launch {
-            val code = repository.generateActivationCode(months, note)
+            val code = repository.generateActivationCode(months, note, ownerCredential)
             onGenerated(code)
         }
     }
