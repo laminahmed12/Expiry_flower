@@ -294,8 +294,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // --- Admin panel actions ---
     fun generateNewCode(months: Int, note: String, onGenerated: (ActivationCode) -> Unit) {
         viewModelScope.launch {
-            val code = repository.generateActivationCode(months, note, ownerCredential)
-            onGenerated(code)
+            try {
+                val code = repository.generateActivationCode(months, note, ownerCredential)
+                onGenerated(code)
+                setMessage("تم إنشاء الترخيص وحفظه في خادم ADREEMK.")
+            } catch (e: Exception) {
+                setMessage(e.message ?: "تعذر إنشاء الترخيص من الخادم.")
+            }
         }
     }
 
