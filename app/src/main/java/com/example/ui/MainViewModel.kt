@@ -71,15 +71,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _alertThresholdDays = MutableStateFlow(repository.getAlertThresholdDays())
     val alertThresholdDays: StateFlow<Int> = _alertThresholdDays.asStateFlow()
 
-    // License Status: Permanently licensed full version
+    // License status is resolved from the ADREEMK Cloudflare licensing server.
     private val _licenseStatus = MutableStateFlow(
         LicenseStatus(
             isTrialActive = false,
             trialDaysRemaining = 0,
-            isLicensed = true,
-            licenseType = "نسخة كاملة معتمدة (ترخيص دائم)",
-            licenseExpiryFormatted = "صالح مدى الحياة",
-            isAccessAllowed = true
+            isLicensed = false,
+            licenseType = "جاري التحقق من الترخيص",
+            licenseExpiryFormatted = null,
+            isAccessAllowed = false
         )
     )
     val licenseStatus: StateFlow<LicenseStatus> = _licenseStatus.asStateFlow()
