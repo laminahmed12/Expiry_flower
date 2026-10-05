@@ -61,7 +61,6 @@ class ExampleRobolectricTest {
         id = 101L,
         name = "حليب قليل الدسم",
         category = com.example.data.model.ItemCategory.FOOD.code,
-        productionDate = "2026-10-01",
         expiryDate = "2026-10-05",
         quantity = 3,
         storageLocation = "الثلاجة"
