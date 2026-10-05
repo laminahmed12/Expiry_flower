@@ -100,11 +100,9 @@ fun AddEditItemScreen(
     }
 
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US) }
-    val todayStr = remember { dateFormat.format(Date()) }
 
     var name by remember { mutableStateOf(editingItem?.name ?: "") }
     var category by remember { mutableStateOf(editingItem?.category ?: ItemCategory.FOOD.code) }
-    var productionDate by remember { mutableStateOf(editingItem?.productionDate ?: todayStr) }
     var expiryDate by remember {
         mutableStateOf(
             editingItem?.expiryDate ?: run {
@@ -127,7 +125,6 @@ fun AddEditItemScreen(
     var nameError by remember { mutableStateOf(false) }
 
     // Date Picker States
-    var showProductionDatePicker by remember { mutableStateOf(false) }
     var showExpiryDatePicker by remember { mutableStateOf(false) }
 
     // Apply scanned barcode directly without fake mock presets
@@ -143,35 +140,6 @@ fun AddEditItemScreen(
     ) { uri: Uri? ->
         if (uri != null) {
             imageUri = uri.toString()
-        }
-    }
-
-    // Production Date Picker Dialog
-    if (showProductionDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = System.currentTimeMillis()
-        )
-        DatePickerDialog(
-            onDismissRequest = { showProductionDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            productionDate = dateFormat.format(Date(millis))
-                        }
-                        showProductionDatePicker = false
-                    }
-                ) {
-                    Text("تأكيد")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showProductionDatePicker = false }) {
-                    Text("إلغاء")
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 
@@ -396,22 +364,6 @@ fun AddEditItemScreen(
                         }
                     }
 
-                    // Production Date
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showProductionDatePicker = true }
-                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(10.dp))
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("تاريخ الإنتاج (Production Date):", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(productionDate, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                        }
-                        Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
                 }
             }
 
@@ -598,7 +550,6 @@ fun AddEditItemScreen(
                         id = editingItem?.id ?: 0L,
                         name = name.trim(),
                         category = category,
-                        productionDate = productionDate,
                         expiryDate = expiryDate,
                         quantity = quantity,
                         storageLocation = storageLocation.trim(),
