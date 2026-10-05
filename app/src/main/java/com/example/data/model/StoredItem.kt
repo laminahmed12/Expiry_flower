@@ -26,7 +26,6 @@ data class StoredItem(
     val id: Long = 0,
     val name: String,
     val category: String, // FOOD, CONSUMABLES, MEDICINE
-    val productionDate: String, // YYYY-MM-DD
     val expiryDate: String, // YYYY-MM-DD
     val quantity: Int = 1,
     val storageLocation: String = "", // مثل: الثلاجة، خزانة الأدوية، المستودع
