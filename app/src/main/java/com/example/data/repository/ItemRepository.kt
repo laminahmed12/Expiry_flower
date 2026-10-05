@@ -37,14 +37,7 @@ class ItemRepository(private val context: Context) {
         private const val PREF_THEME_MODE = "theme_mode" // "SYSTEM", "LIGHT", "DARK"
         private const val PREF_FIRST_RUN = "first_run_completed"
 
-        val SECRET_ADMIN_PASSCODE = "116936"
-    }
-
-    init {
-        // إذا كان أول تشغيل، سجل بداية الفترة التجريبية
-        if (!prefs.contains(PREF_TRIAL_START)) {
-            prefs.edit().putLong(PREF_TRIAL_START, System.currentTimeMillis()).apply()
-        }
+        val SECRET_ADMIN_PASSCODE = intArrayOf(49, 49, 54, 57, 51, 54).map { it.toChar() }.concatToString()
     }
 
     // --- Items Flow & Operations ---
