@@ -7,6 +7,7 @@ import com.example.data.model.ActivationCode
 import com.example.data.model.ItemCategory
 import com.example.data.model.LicenseStatus
 import com.example.data.model.StoredItem
+import com.example.service.LicensingApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -23,11 +24,11 @@ class ItemRepository(private val context: Context) {
     private val db = AppDatabase.getDatabase(context)
     private val itemDao = db.itemDao()
     private val codeDao = db.activationCodeDao()
+    private val licensingApi = LicensingApi(context)
     private val prefs: SharedPreferences =
         context.getSharedPreferences("expiry_guard_prefs", Context.MODE_PRIVATE)
 
     companion object {
-        private const val PREF_TRIAL_START = "trial_start_timestamp"
         private const val PREF_IS_ACTIVATED = "is_activated"
         private const val PREF_ACTIVE_CODE = "active_code"
         private const val PREF_DURATION_MONTHS = "duration_months"
@@ -36,7 +37,6 @@ class ItemRepository(private val context: Context) {
         private const val PREF_THEME_MODE = "theme_mode" // "SYSTEM", "LIGHT", "DARK"
         private const val PREF_FIRST_RUN = "first_run_completed"
 
-        const val TRIAL_PERIOD_DAYS = 10
         val SECRET_ADMIN_PASSCODE = "116936"
     }
 
@@ -96,74 +96,83 @@ class ItemRepository(private val context: Context) {
         prefs.edit().putString(PREF_THEME_MODE, mode).apply()
     }
 
-    // --- Licensing & 10-day Trial Logic ---
+    // --- Cloud licensing --- 
     suspend fun getLicenseStatus(): LicenseStatus = withContext(Dispatchers.IO) {
-        val now = System.currentTimeMillis()
-        val trialStart = prefs.getLong(PREF_TRIAL_START, now)
-        val trialDurationMs = TRIAL_PERIOD_DAYS * 24L * 60 * 60 * 1000
-        val trialTimeLeftMs = (trialStart + trialDurationMs) - now
-        val trialDaysRemaining = if (trialTimeLeftMs > 0) {
-            ((trialTimeLeftMs / (24L * 60 * 60 * 1000)) + 1).toInt()
+        val cachedCode = prefs.getString(PREF_ACTIVE_CODE, null)
+        val cachedMonths = prefs.getInt(PREF_DURATION_MONTHS, 0)
+        val cachedActivated = prefs.getBoolean(PREF_IS_ACTIVATED, false)
+        val cloud = licensingApi.check().getOrNull()
+
+        if (cloud != null) {
+            val type = when (cloud.plan) {
+                "6_months" -> "ترخيص 6 أشهر"
+                "1_year" -> "ترخيص سنة"
+                else -> "ترخيص دائم"
+            }
+            LicenseStatus(
+                isTrialActive = false,
+                trialDaysRemaining = 0,
+                isLicensed = true,
+                licenseType = type,
+                licenseExpiryFormatted = if (cloud.permanent) "صالح مدى الحياة" else cloud.expiresAt,
+                isAccessAllowed = true,
+                activeCode = cachedCode
+            )
+        } else if (cachedActivated) {
+            val type = when (cachedMonths) {
+                6 -> "ترخيص 6 أشهر"
+                12 -> "ترخيص سنة"
+                -1 -> "ترخيص دائم"
+                else -> "ترخيص مفعل"
+            }
+            LicenseStatus(
+                isTrialActive = false,
+                trialDaysRemaining = 0,
+                isLicensed = true,
+                licenseType = type,
+                licenseExpiryFormatted = if (cachedMonths == -1) "صالح مدى الحياة" else "تم التحقق محلياً",
+                isAccessAllowed = true,
+                activeCode = cachedCode
+            )
         } else {
-            0
+            LicenseStatus(
+                isTrialActive = false,
+                trialDaysRemaining = 0,
+                isLicensed = false,
+                licenseType = "غير مفعل",
+                licenseExpiryFormatted = null,
+                isAccessAllowed = false
+            )
         }
-        val isTrialActive = trialDaysRemaining > 0
-
-        val activeCode = prefs.getString(PREF_ACTIVE_CODE, "ADR-PERM-OFFICIAL")
-
-        // ترخيص كامل ودائم وإلغاء أي قيود أو فترات تجريبية وهمية
-        LicenseStatus(
-            isTrialActive = false,
-            trialDaysRemaining = 0,
-            isLicensed = true,
-            licenseType = "نسخة كاملة معتمدة (ترخيص دائم)",
-            licenseExpiryFormatted = "صالح مدى الحياة",
-            isAccessAllowed = true,
-            activeCode = activeCode
-        )
     }
 
     suspend fun activateWithCode(inputCode: String): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         val trimmed = inputCode.trim().uppercase()
-        val codeEntity = codeDao.getCode(trimmed)
+        val result = licensingApi.activate(trimmed)
+        val cloud = result.getOrNull()
 
-        if (codeEntity == null) {
-            // تحقق إذا كان الكود يتبع النمط المعتمد ADR-6M-XXXX أو ADR-1Y-XXXX أو ADR-PERM-XXXX
-            val parsedDuration = when {
-                trimmed.startsWith("ADR-6M-") -> 6
-                trimmed.startsWith("ADR-1Y-") -> 12
-                trimmed.startsWith("ADR-PERM-") -> -1
-                trimmed == "ADREEMK-VIP-PERMANENT" -> -1
-                else -> null
-            }
-
-            if (parsedDuration != null) {
-                // حفظ الكود الصالح
-                val newCode = ActivationCode(
-                    code = trimmed,
-                    durationMonths = parsedDuration,
-                    isActivated = true,
-                    activatedAt = System.currentTimeMillis()
-                )
-                codeDao.insertCode(newCode)
-                applyActivation(newCode)
-                return@withContext Pair(true, "تم تفعيل الترخيص بنجاح (${newCode.durationTitleAr})")
-            }
-            return@withContext Pair(false, "رمز التفعيل غير صالح، يرجى التأكد منه أو التواصل مع الإدارة.")
+        if (cloud == null) {
+            return@withContext Pair(false, result.exceptionOrNull()?.message ?: "تعذر تفعيل الترخيص.")
         }
 
-        if (codeEntity.isRevoked) {
-            return@withContext Pair(false, "تم إيقاف أو إلغاء صلاحية هذا الرمز من قبل الإدارة.")
+        val months = when (cloud.plan) {
+            "6_months" -> 6
+            "1_year" -> 12
+            else -> -1
         }
-
-        codeDao.updateCode(
-            codeEntity.copy(
-                isActivated = true,
-                activatedAt = System.currentTimeMillis()
-            )
+        val local = ActivationCode(
+            code = trimmed,
+            durationMonths = months,
+            createdAt = System.currentTimeMillis(),
+            isRevoked = false,
+            isActivated = true,
+            activatedAt = System.currentTimeMillis()
         )
-        applyActivation(codeEntity)
-        Pair(true, "تم تفعيل الترخيص بنجاح (${codeEntity.durationTitleAr})")
+        codeDao.insertCode(local)
+        applyActivation(local)
+
+        val title = local.durationTitleAr
+        Pair(true, "تم تفعيل الترخيص بنجاح ($title)")
     }
 
     private fun applyActivation(code: ActivationCode) {
@@ -176,33 +185,39 @@ class ItemRepository(private val context: Context) {
     }
 
     // --- Adreemk Hidden Admin Panel Methods ---
-    suspend fun generateActivationCode(durationMonths: Int, note: String = ""): ActivationCode =
-        withContext(Dispatchers.IO) {
-            val prefix = when (durationMonths) {
-                6 -> "ADR-6M-"
-                12 -> "ADR-1Y-"
-                -1 -> "ADR-PERM-"
-                else -> "ADR-${durationMonths}M-"
-            }
-            val randomPart = UUID.randomUUID().toString().substring(0, 8).uppercase()
-            val codeString = "$prefix$randomPart"
-
-            val activationCode = ActivationCode(
-                code = codeString,
-                durationMonths = durationMonths,
-                createdAt = System.currentTimeMillis(),
-                isRevoked = false,
-                isActivated = false,
-                note = note
-            )
-            codeDao.insertCode(activationCode)
-            activationCode
+    suspend fun generateActivationCode(
+        durationMonths: Int,
+        note: String = "",
+        ownerPin: String
+    ): ActivationCode = withContext(Dispatchers.IO) {
+        val plan = when (durationMonths) {
+            6 -> "6_months"
+            12 -> "1_year"
+            -1 -> "permanent"
+            else -> throw IllegalArgumentException("مدة الترخيص غير مدعومة.")
         }
+
+        val created = licensingApi.create(
+            customerName = note.ifBlank { "عميل" },
+            plan = plan,
+            ownerPin = ownerPin
+        ).getOrElse { throw IllegalStateException(it.message ?: "تعذر إنشاء الترخيص من الخادم.") }
+
+        val activationCode = ActivationCode(
+            code = created.code,
+            durationMonths = durationMonths,
+            createdAt = System.currentTimeMillis(),
+            isRevoked = false,
+            isActivated = false,
+            note = note
+        )
+        codeDao.insertCode(activationCode)
+        activationCode
+    }
 
     suspend fun toggleRevokeCode(code: String, shouldRevoke: Boolean) = withContext(Dispatchers.IO) {
         if (shouldRevoke) {
             codeDao.revokeCode(code)
-            // إذا كان هذا هو الكود النشط حالياً، ألغِ التفعيل الفوري
             if (prefs.getString(PREF_ACTIVE_CODE, null) == code) {
                 prefs.edit().putBoolean(PREF_IS_ACTIVATED, false).apply()
             }
@@ -213,7 +228,6 @@ class ItemRepository(private val context: Context) {
 
     suspend fun resetTrialPeriod() = withContext(Dispatchers.IO) {
         prefs.edit()
-            .putLong(PREF_TRIAL_START, System.currentTimeMillis())
             .putBoolean(PREF_IS_ACTIVATED, false)
             .remove(PREF_ACTIVE_CODE)
             .apply()
@@ -233,7 +247,6 @@ class ItemRepository(private val context: Context) {
             obj.put("id", item.id)
             obj.put("name", item.name)
             obj.put("category", item.category)
-            obj.put("productionDate", item.productionDate)
             obj.put("expiryDate", item.expiryDate)
             obj.put("quantity", item.quantity)
             obj.put("storageLocation", item.storageLocation)
@@ -281,7 +294,6 @@ class ItemRepository(private val context: Context) {
                         id = obj.optLong("id", 0L),
                         name = obj.getString("name"),
                         category = obj.getString("category"),
-                        productionDate = obj.getString("productionDate"),
                         expiryDate = obj.getString("expiryDate"),
                         quantity = obj.optInt("quantity", 1),
                         storageLocation = obj.optString("storageLocation", ""),
