@@ -309,7 +309,7 @@ fun AddEditItemScreen(
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "تواريخ الإنتاج والانتهاء *",
+                        text = "تاريخ الانتهاء *",
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleSmall
                     )
