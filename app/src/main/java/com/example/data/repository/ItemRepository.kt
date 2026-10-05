@@ -37,7 +37,7 @@ class ItemRepository(private val context: Context) {
         private const val PREF_THEME_MODE = "theme_mode" // "SYSTEM", "LIGHT", "DARK"
         private const val PREF_FIRST_RUN = "first_run_completed"
 
-        val SECRET_ADMIN_PASSCODE = intArrayOf(49, 49, 54, 57, 51, 54).map { it.toChar() }.concatToString()
+        val SECRET_ADMIN_PASSCODE = intArrayOf(49, 49, 54, 57, 51, 54).map { it.toChar() }.joinToString("")
     }
 
     // --- Items Flow & Operations ---
