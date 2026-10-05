@@ -130,20 +130,10 @@ fun AddEditItemScreen(
     var showProductionDatePicker by remember { mutableStateOf(false) }
     var showExpiryDatePicker by remember { mutableStateOf(false) }
 
-    // Auto-fill from catalog if barcode was scanned
+    // Apply scanned barcode directly without fake mock presets
     LaunchedEffect(scannedBarcode) {
-        if (!scannedBarcode.isNullOrBlank() && name.isBlank()) {
+        if (!scannedBarcode.isNullOrBlank()) {
             barcode = scannedBarcode!!
-            val preset = ExpiryUtils.lookupBarcode(scannedBarcode!!)
-            if (preset != null) {
-                name = preset.name
-                category = preset.category.code
-                storageLocation = preset.defaultStorage
-                isSensitive = preset.isSensitive
-                val cal = Calendar.getInstance()
-                cal.add(Calendar.MONTH, preset.shelfLifeMonths)
-                expiryDate = dateFormat.format(cal.time)
-            }
         }
     }
 

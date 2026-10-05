@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
@@ -295,25 +296,25 @@ fun AdreemkAdminScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "إعادة ضبط الفترة التجريبية (10 أيام)",
+                                text = "تنظيف وحذف البيانات والعمليات التجريبية",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
                             Text(
-                                text = "مفيد لاختبار تدفق التراخيص أو منح تجربة جديدة للجهاز",
+                                text = "حذف أي مواد أو سجلات تجريبية والإبقاء على البيانات الحقيقية فقط",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         OutlinedButton(
                             onClick = {
-                                viewModel.resetTrial()
-                                Toast.makeText(context, "تمت إعادة تعيين فترة الـ 10 أيام بنجاح", Toast.LENGTH_SHORT).show()
+                                viewModel.purgeSampleData()
+                                Toast.makeText(context, "تم تنظيف وحذف البيانات التجريبية", Toast.LENGTH_SHORT).show()
                             }
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("إعادة ضبط", fontSize = 11.sp)
+                            Text("تنظيف الآن", fontSize = 11.sp)
                         }
                     }
                 }

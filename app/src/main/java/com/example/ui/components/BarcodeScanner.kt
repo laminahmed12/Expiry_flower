@@ -251,6 +251,7 @@ fun BarcodeScanner(
                     factory = { ctx ->
                         val previewView = PreviewView(ctx).apply {
                             scaleType = PreviewView.ScaleType.FILL_CENTER
+                            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                         }
 
                         val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
@@ -258,9 +259,7 @@ fun BarcodeScanner(
                             try {
                                 val cameraProvider = cameraProviderFuture.get()
 
-                                val preview = Preview.Builder().build().also {
-                                    it.setSurfaceProvider(previewView.surfaceProvider)
-                                }
+                                val preview = Preview.Builder().build()
 
                                 val imageAnalysis = ImageAnalysis.Builder()
                                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -293,6 +292,8 @@ fun BarcodeScanner(
                                         preview,
                                         imageAnalysis
                                     )
+                                    // Attach SurfaceProvider AFTER lifecycle binding completes to eliminate visual distortion and artifacts
+                                    preview.setSurfaceProvider(previewView.surfaceProvider)
                                 } else {
                                     cameraError = "الكاميرا غير متوفرة في بيئة المحاكي الحالية. يرجى استخدام الإدخال اليدوي أو اختيار صورة من المعرض."
                                 }
@@ -306,7 +307,7 @@ fun BarcodeScanner(
                     },
                     modifier = Modifier
                         .fillMaxSize()
-                        .testTag("camerax_preview_view")
+                        .testTag("BarcodeScanner-PreviewView")
                 )
             }
 

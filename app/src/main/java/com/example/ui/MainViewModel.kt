@@ -71,14 +71,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _alertThresholdDays = MutableStateFlow(repository.getAlertThresholdDays())
     val alertThresholdDays: StateFlow<Int> = _alertThresholdDays.asStateFlow()
 
-    // License & Trial Status
+    // License Status: Permanently licensed full version
     private val _licenseStatus = MutableStateFlow(
         LicenseStatus(
-            isTrialActive = true,
-            trialDaysRemaining = 10,
-            isLicensed = false,
-            licenseType = "فترة تجريبية",
-            licenseExpiryFormatted = null,
+            isTrialActive = false,
+            trialDaysRemaining = 0,
+            isLicensed = true,
+            licenseType = "نسخة كاملة معتمدة (ترخيص دائم)",
+            licenseExpiryFormatted = "صالح مدى الحياة",
             isAccessAllowed = true
         )
     )
@@ -305,11 +305,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun resetTrial() {
+    fun purgeSampleData() {
         viewModelScope.launch {
-            repository.resetTrialPeriod()
-            refreshLicenseStatus()
-            setMessage("تم إعادة تفعيل الفترة التجريبية (10 أيام كاملة)")
+            repository.purgeAllSampleData()
+            setMessage("تم حذف وإلغاء جميع البيانات والعمليات التجريبية بنجاح.")
         }
     }
 
@@ -340,23 +339,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val items = repository.allItems.firstOrNull() ?: emptyList()
             val candidateItem = items.firstOrNull {
                 ExpiryUtils.calculateDaysRemaining(it.expiryDate) <= alertThresholdDays.value
-            } ?: items.firstOrNull() ?: StoredItem(
-                id = 999L,
-                name = "حليب طازج كامل الدسم",
-                category = ItemCategory.FOOD.code,
-                productionDate = "2026-09-25",
-                expiryDate = "2026-10-06",
-                quantity = 2,
-                storageLocation = "الثلاجة - الرف الأول",
-                imageUri = null,
-                barcode = "6281031112223",
-                notes = "نموذج تجريبي للإشعار المصور",
-                isSensitive = false,
-                isConsumed = false
-            )
+            } ?: items.firstOrNull()
 
-            ExpiryCheckWorker.sendProductNotification(context, candidateItem)
-            setMessage("تم إرسال إشعار مصور بنجاح للمنتج: ${candidateItem.name}")
+            if (candidateItem != null) {
+                ExpiryCheckWorker.sendProductNotification(context, candidateItem)
+                setMessage("تم إرسال إشعار فوري للمنتج: ${candidateItem.name}")
+            } else {
+                setMessage("لا توجد مواد مخزنة حالياً لإرسال إشعار بها. يرجى إضافة مادة أولاً.")
+            }
         }
     }
 

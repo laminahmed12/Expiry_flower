@@ -109,64 +109,17 @@ class ItemRepository(private val context: Context) {
         }
         val isTrialActive = trialDaysRemaining > 0
 
-        val isActivated = prefs.getBoolean(PREF_IS_ACTIVATED, false)
-        val activeCode = prefs.getString(PREF_ACTIVE_CODE, null)
-        val durationMonths = prefs.getInt(PREF_DURATION_MONTHS, 0)
-        val activationTime = prefs.getLong(PREF_ACTIVATION_TIMESTAMP, 0L)
+        val activeCode = prefs.getString(PREF_ACTIVE_CODE, "ADR-PERM-OFFICIAL")
 
-        // التحقق من قاعدة البيانات هل تم إلغاء الكود من لوحة تحكم Adreemk
-        var isRevoked = false
-        if (isActivated && activeCode != null) {
-            val codeEntity = codeDao.getCode(activeCode)
-            if (codeEntity != null && codeEntity.isRevoked) {
-                isRevoked = true
-            }
-        }
-
-        if (isActivated && !isRevoked) {
-            if (durationMonths == -1) {
-                // ترخيص دائم
-                return@withContext LicenseStatus(
-                    isTrialActive = false,
-                    trialDaysRemaining = 0,
-                    isLicensed = true,
-                    licenseType = "ترخيص دائم (غير محدود)",
-                    licenseExpiryFormatted = "صالح مدى الحياة",
-                    isAccessAllowed = true,
-                    activeCode = activeCode
-                )
-            } else {
-                // حساب تاريخ انتهاء الترخيص (6 أشهر أو سنة)
-                val cal = Calendar.getInstance()
-                cal.timeInMillis = activationTime
-                cal.add(Calendar.MONTH, durationMonths)
-                val expiryTime = cal.timeInMillis
-
-                val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
-                val expiryFormatted = sdf.format(Date(expiryTime))
-
-                val isStillValid = now < expiryTime
-                return@withContext LicenseStatus(
-                    isTrialActive = false,
-                    trialDaysRemaining = 0,
-                    isLicensed = isStillValid,
-                    licenseType = if (durationMonths == 6) "ترخيص 6 أشهر" else "ترخيص سنة واحدة",
-                    licenseExpiryFormatted = expiryFormatted,
-                    isAccessAllowed = isStillValid,
-                    activeCode = activeCode
-                )
-            }
-        }
-
-        // في حال عدم التفعيل أو إلغاء الرمز: يعتمد على الفترة التجريبية
+        // ترخيص كامل ودائم وإلغاء أي قيود أو فترات تجريبية وهمية
         LicenseStatus(
-            isTrialActive = isTrialActive,
-            trialDaysRemaining = trialDaysRemaining,
-            isLicensed = false,
-            licenseType = if (isTrialActive) "فترة تجريبية (10 أيام)" else "الفترة التجريبية منتهية",
-            licenseExpiryFormatted = if (isTrialActive) "متبقي $trialDaysRemaining أيام تجريبية" else "انتهت فترة التجربة",
-            isAccessAllowed = isTrialActive,
-            activeCode = null
+            isTrialActive = false,
+            trialDaysRemaining = 0,
+            isLicensed = true,
+            licenseType = "نسخة كاملة معتمدة (ترخيص دائم)",
+            licenseExpiryFormatted = "صالح مدى الحياة",
+            isAccessAllowed = true,
+            activeCode = activeCode
         )
     }
 
@@ -399,125 +352,27 @@ class ItemRepository(private val context: Context) {
         }
     }
 
-    // --- Pre-populate Sample Data on first install ---
+    // --- Clean and purge all dummy / sample data ---
     suspend fun populateInitialDataIfEmpty() = withContext(Dispatchers.IO) {
-        if (!prefs.getBoolean(PREF_FIRST_RUN, false)) {
-            val count = itemDao.getAllItemsSnapshot().size
-            if (count == 0) {
-                val todayCal = Calendar.getInstance()
-                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        prefs.edit().putBoolean(PREF_FIRST_RUN, true).apply()
+        purgeAllSampleData()
+    }
 
-                // تواريخ مدروسة لعرض الحالات: منتهي، يوشك على الانتهاء، آمن
-                val calExpired = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -5) }
-                val calSoon1 = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 3) }
-                val calSoon2 = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 12) }
-                val calSafe1 = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 45) }
-                val calSafe2 = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 180) }
-
-                val sampleItems = listOf(
-                    StoredItem(
-                        name = "باراسيتامول 500 ملغ (أقراص)",
-                        category = ItemCategory.MEDICINE.code,
-                        productionDate = "2024-01-10",
-                        expiryDate = sdf.format(calSoon1.time),
-                        quantity = 2,
-                        storageLocation = "صيدلية المنزل / خزانة الغرفة",
-                        barcode = "6281001234567",
-                        notes = "خافض حرارة ومسكن ألم، يحفظ في مكان جاف أقل من 25 درجة مئوية",
-                        isSensitive = true
-                    ),
-                    StoredItem(
-                        name = "أموكسيسيلين مضاد حيوي (شراب)",
-                        category = ItemCategory.MEDICINE.code,
-                        productionDate = "2024-03-01",
-                        expiryDate = sdf.format(calExpired.time),
-                        quantity = 1,
-                        storageLocation = "رف الثلاجة الأوسط",
-                        barcode = "6281007890123",
-                        notes = "يحفظ بعد الحل في الثلاجة ولا يستخدم بعد انتهاء المدة إطلاقاً",
-                        isSensitive = true
-                    ),
-                    StoredItem(
-                        name = "حليب طازج كامل الدسم",
-                        category = ItemCategory.FOOD.code,
-                        productionDate = "2026-09-25",
-                        expiryDate = sdf.format(calSoon1.time),
-                        quantity = 3,
-                        storageLocation = "باب الثلاجة",
-                        barcode = "6281031112223",
-                        notes = "يستهلك خلال 3 أيام من الفتح"
-                    ),
-                    StoredItem(
-                        name = "زبادي يوناني طبيعي",
-                        category = ItemCategory.FOOD.code,
-                        productionDate = "2026-09-20",
-                        expiryDate = sdf.format(calSoon2.time),
-                        quantity = 4,
-                        storageLocation = "درج الألبان بالثلاجة",
-                        barcode = "6281044455566",
-                        notes = "غني بالبروتين"
-                    ),
-                    StoredItem(
-                        name = "زيت زيتون بكر ممتاز",
-                        category = ItemCategory.FOOD.code,
-                        productionDate = "2024-02-15",
-                        expiryDate = sdf.format(calSafe2.time),
-                        quantity = 2,
-                        storageLocation = "مخزن المطبخ السفلي",
-                        barcode = "6281055566677",
-                        notes = "معصور على البارد"
-                    ),
-                    StoredItem(
-                        name = "معقم يدين طبي كحولي 70%",
-                        category = ItemCategory.CONSUMABLES.code,
-                        productionDate = "2023-11-01",
-                        expiryDate = sdf.format(calSafe1.time),
-                        quantity = 5,
-                        storageLocation = "خزانة المستلزمات الطبية",
-                        barcode = "6281066677788",
-                        notes = "للاستعمال الخارجي فقط"
-                    ),
-                    StoredItem(
-                        name = "سائل غسيل الأطباق المضاد للبكتيريا",
-                        category = ItemCategory.CONSUMABLES.code,
-                        productionDate = "2024-01-05",
-                        expiryDate = sdf.format(calSafe2.time),
-                        quantity = 2,
-                        storageLocation = "تحت حوض المطبخ",
-                        barcode = "6281077788899",
-                        notes = "عبوة اقتصادية 1 لتر"
-                    )
-                )
-
-                itemDao.insertAll(sampleItems)
-
-                // إنشاء بعض رموز التفعيل الأولية التجريبية للوحة Adreemk
-                val initialCodes = listOf(
-                    ActivationCode(
-                        code = "ADR-6M-DEMO2026",
-                        durationMonths = 6,
-                        createdAt = System.currentTimeMillis(),
-                        isRevoked = false,
-                        note = "رمز تجريبي 6 أشهر"
-                    ),
-                    ActivationCode(
-                        code = "ADR-1Y-PREMIUM",
-                        durationMonths = 12,
-                        createdAt = System.currentTimeMillis(),
-                        isRevoked = false,
-                        note = "رمز سنوي ذهبي"
-                    ),
-                    ActivationCode(
-                        code = "ADR-PERM-VIP999",
-                        durationMonths = -1,
-                        createdAt = System.currentTimeMillis(),
-                        isRevoked = false,
-                        note = "ترخيص دائم مدى الحياة"
-                    )
-                )
-                codeDao.insertAll(initialCodes)
+    suspend fun purgeAllSampleData() = withContext(Dispatchers.IO) {
+        val sampleBarcodes = setOf(
+            "6281001234567",
+            "6281007890123",
+            "6281031112223",
+            "6281044455566",
+            "6281055566677",
+            "6281066677788",
+            "6281077788899"
+        )
+        val allItems = itemDao.getAllItemsSnapshot()
+        for (item in allItems) {
+            if (item.barcode != null && sampleBarcodes.contains(item.barcode)) {
+                itemDao.deleteItem(item)
             }
-            prefs.edit().putBoolean(PREF_FIRST_RUN, true).apply()
         }
     }
 }

@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.DarkMode
@@ -88,6 +89,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.data.model.ItemCategory
 import com.example.data.model.StoredItem
 import com.example.ui.MainViewModel
@@ -427,12 +430,14 @@ fun HomeScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. Trial / License Banner
-            item {
-                LicenseBanner(
-                    status = licenseStatus,
-                    onActivateClick = { showActivationDialog = true }
-                )
+            // 1. License Banner (Only displayed if not fully licensed)
+            if (!licenseStatus.isLicensed) {
+                item {
+                    LicenseBanner(
+                        status = licenseStatus,
+                        onActivateClick = { showActivationDialog = true }
+                    )
+                }
             }
 
             // 2. Statistics Grid Cards
@@ -465,7 +470,7 @@ fun HomeScreen(
                             }
                         },
                         singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(22.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("search_field")
@@ -550,7 +555,7 @@ fun LicenseBanner(
     }
 
     Card(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = bgColor),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         modifier = Modifier.fillMaxWidth()
@@ -660,14 +665,15 @@ fun StatCard(
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         modifier = modifier
     ) {
         Column(
             modifier = Modifier
-                .padding(vertical = 10.dp, horizontal = 4.dp)
+                .padding(vertical = 12.dp, horizontal = 4.dp)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -677,9 +683,11 @@ fun StatCard(
                 fontSize = 18.sp,
                 color = color
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = title,
                 fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -738,9 +746,14 @@ fun FilterChipItem(
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(22.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        ),
         modifier = Modifier.clickable { onClick() }
     ) {
         Row(
@@ -749,7 +762,11 @@ fun FilterChipItem(
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = title, fontSize = 13.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            )
         }
     }
 }
@@ -838,14 +855,25 @@ fun ItemCard(
     val status = ExpiryUtils.getExpiryStatus(item.expiryDate, thresholdDays)
 
     val badgeInfo = when (status) {
-        ExpiryStatus.EXPIRED -> ItemBadgeInfo(palette.dangerContainer, "منتهي الصلاحية", palette.danger, palette.onDangerBadgeText)
-        ExpiryStatus.EXPIRING_SOON -> ItemBadgeInfo(palette.warningContainer, "اقترب الانتهاء", palette.warning, palette.onWarningBadgeText)
-        ExpiryStatus.SAFE -> ItemBadgeInfo(palette.safeContainer, "صالح للاستخدام", palette.safe, palette.onSafeBadgeText)
+        ExpiryStatus.EXPIRED -> ItemBadgeInfo(
+            bg = palette.dangerContainer,
+            text = "منتهي الصلاحية",
+            statusColor = palette.danger,
+            badgeTextColor = palette.onDangerText
+        )
+        ExpiryStatus.EXPIRING_SOON -> ItemBadgeInfo(
+            bg = palette.warningContainer,
+            text = if (daysRemaining == 0L) "ينتهي اليوم" else "متبقي $daysRemaining أيام",
+            statusColor = palette.warning,
+            badgeTextColor = palette.onWarningText
+        )
+        ExpiryStatus.SAFE -> ItemBadgeInfo(
+            bg = palette.safeContainer,
+            text = "صالح للاستخدام",
+            statusColor = palette.safe,
+            badgeTextColor = palette.onSafeText
+        )
     }
-    val badgeBg = badgeInfo.bg
-    val badgeText = badgeInfo.text
-    val statusColor = badgeInfo.statusColor
-    val badgeTextColor = badgeInfo.badgeTextColor
 
     val category = ItemCategory.fromCode(item.category)
     val categoryIcon = when (category) {
@@ -855,252 +883,212 @@ fun ItemCard(
     }
 
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
         border = BorderStroke(
             1.dp,
-            if (status == ExpiryStatus.EXPIRED) palette.danger.copy(alpha = 0.5f)
-            else if (daysRemaining < 7) palette.warning.copy(alpha = 0.5f)
-            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            if (status == ExpiryStatus.EXPIRED) palette.danger.copy(alpha = 0.35f)
+            else if (daysRemaining <= 3) palette.warning.copy(alpha = 0.35f)
+            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
         ),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("item_card_${item.id}")
+            .clickable { onEdit() }
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            // Top Row: Category + Status Badge + Voice Speaker
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header Row: Thumbnail/Icon + Name/Meta + Expiry Status Pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Category Chip
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Product Thumbnail or Category Icon
+                if (!item.imageUri.isNullOrBlank()) {
+                    AsyncImage(
+                        model = item.imageUri,
+                        contentDescription = item.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                    )
+                } else {
                     Surface(
-                        shape = CircleShape,
-                        color = if (category == ItemCategory.MEDICINE) palette.medicineContainer
-                        else MaterialTheme.colorScheme.secondaryContainer,
-                        modifier = Modifier.size(28.dp)
+                        shape = RoundedCornerShape(14.dp),
+                        color = when (category) {
+                            ItemCategory.MEDICINE -> palette.medicineContainer
+                            ItemCategory.FOOD -> palette.safeContainer
+                            ItemCategory.CONSUMABLES -> MaterialTheme.colorScheme.surfaceVariant
+                        },
+                        modifier = Modifier.size(46.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = categoryIcon,
                                 contentDescription = null,
-                                tint = if (category == ItemCategory.MEDICINE) palette.medicine
-                                else MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = category.titleAr,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    if (item.isSensitive || category == ItemCategory.MEDICINE) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = palette.medicineContainer
-                        ) {
-                            Text(
-                                text = "مادة حساسة",
-                                color = palette.medicine,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
-                    if (daysRemaining < 7) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = if (daysRemaining < 0) palette.dangerContainer else palette.warningContainer
-                        ) {
-                            Text(
-                                text = if (daysRemaining < 0) "منتهي الصلاحية!" else "أقل من 7 أيام!",
-                                color = if (daysRemaining < 0) palette.danger else palette.warning,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                tint = when (category) {
+                                    ItemCategory.MEDICINE -> palette.medicine
+                                    ItemCategory.FOOD -> palette.safe
+                                    ItemCategory.CONSUMABLES -> MaterialTheme.colorScheme.primary
+                                },
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
                 }
 
-                // Voice Alert Speaker Button
-                IconButton(
-                    onClick = onVoiceAlert,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.VolumeUp,
-                        contentDescription = "نطق تنبيه الصلاحية",
-                        tint = statusColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
+                Spacer(modifier = Modifier.width(12.dp))
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Title & Quantity
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (daysRemaining < 7) {
-                        PulsingWarningIcon(
-                            daysRemaining = daysRemaining,
-                            modifier = Modifier.testTag("pulsing_warning_${item.id}")
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text(
-                        text = item.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Text(
-                        text = "الكمية: ${item.quantity}",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Expiry Info Box
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = badgeBg,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
+                // Title & Subtitle Info
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (daysRemaining < 7) {
+                            PulsingWarningIcon(
+                                daysRemaining = daysRemaining,
+                                modifier = Modifier.testTag("pulsing_warning_${item.id}")
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         Text(
-                            text = "تاريخ الانتهاء: ${item.expiryDate}",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = statusColor
-                        )
-                        Text(
-                            text = ExpiryUtils.getRelativeTimeAr(daysRemaining),
-                            fontSize = 11.sp,
-                            color = if (palette.isDark) TextSecondaryDark else statusColor.copy(alpha = 0.85f)
+                            text = item.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = statusColor
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = badgeText,
-                            color = badgeTextColor,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            // Storage Location & Barcode
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (item.storageLocation.isNotBlank()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = item.storageLocation,
-                            fontSize = 12.sp,
+                            text = category.titleAr,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                        Text(
+                            text = "الكمية: ${item.quantity}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (item.storageLocation.isNotBlank()) {
+                            Text(
+                                text = "•",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                            Text(
+                                text = item.storageLocation,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
-                } else {
-                    Spacer(modifier = Modifier.width(1.dp))
                 }
 
-                if (!item.barcode.isNullOrBlank()) {
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Soft Rounded Status Pill (Beep Style)
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = badgeInfo.bg
+                ) {
                     Text(
-                        text = "الباركود: ${item.barcode}",
+                        text = badgeInfo.text,
+                        color = badgeInfo.badgeTextColor,
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
             }
 
-            // Notes if available
-            if (item.notes.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = item.notes,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Action Buttons: Edit and Delete
-            Spacer(modifier = Modifier.height(8.dp))
+            // Info & Quick Action Bar
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(
-                    onClick = onEdit,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("تعديل", fontSize = 12.sp)
+                // Expiry Date & Relative Countdown
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "الانتهاء: ${item.expiryDate}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "(${ExpiryUtils.getRelativeTimeAr(daysRemaining)})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = badgeInfo.badgeTextColor,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
-                Spacer(modifier = Modifier.width(6.dp))
+                // Action Icons (Voice Alert, Edit, Delete)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onVoiceAlert,
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp,
+                            contentDescription = "نطق تنبيه الصلاحية",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
-                TextButton(
-                    onClick = onDelete,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("حذف", fontSize = 12.sp)
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "تعديل المادة",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "حذف المادة",
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
                 }
             }
         }

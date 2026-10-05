@@ -117,7 +117,7 @@ fun BarcodeScannerScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Keyboard, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("إدخال يدوي ونماذج", fontWeight = FontWeight.Bold)
+                            Text("إدخال يدوي للباركود", fontWeight = FontWeight.Bold)
                         }
                     }
                 )
@@ -135,23 +135,22 @@ fun BarcodeScannerScreen(
                     )
                 }
             } else {
-                // Manual Input & Demo Barcode Presets
+                // Manual Barcode Input
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Manual Barcode Input Card
                     Card(
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            modifier = Modifier.padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             Text(
                                 text = "إدخال رقم الباركود يدوياً:",
@@ -159,104 +158,40 @@ fun BarcodeScannerScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
 
+                            Text(
+                                text = "أدخل أرقام الباركود المطبوعة على المنتج لاستخدامه في حفظ بيانات الصلاحية:",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
                             OutlinedTextField(
                                 value = manualBarcodeInput,
                                 onValueChange = { manualBarcodeInput = it },
-                                placeholder = { Text("أدخل الأرقام (مثال: 6281001234567)") },
+                                placeholder = { Text("أدخل أرقام الباركود...") },
                                 leadingIcon = {
                                     Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                                 },
                                 singleLine = true,
+                                shape = RoundedCornerShape(14.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("scanner_manual_input")
                             )
 
-                            val preset = remember(manualBarcodeInput) {
-                                ExpiryUtils.lookupBarcode(manualBarcodeInput)
-                            }
-
-                            if (preset != null) {
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
-                                            Text("تم التعرف على المنتج في قاعدة بيانات الكتالوج:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                            Text("${preset.name} - ${preset.category.titleAr}", fontSize = 12.sp)
-                                        }
-                                    }
-                                }
-                            }
-
                             Button(
                                 onClick = {
                                     if (manualBarcodeInput.isNotBlank()) {
-                                        viewModel.onBarcodeScanned(manualBarcodeInput)
+                                        viewModel.onBarcodeScanned(manualBarcodeInput.trim())
                                     }
                                 },
                                 enabled = manualBarcodeInput.isNotBlank(),
+                                shape = RoundedCornerShape(14.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp)
                                     .testTag("apply_scanned_barcode_btn")
                             ) {
-                                Text("تأكيد وتعبئة بيانات المنتج", fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    // Demo Barcodes Card for rapid testing in emulator
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "نماذج باركود عربية جاهزة للتجربة الفورية:",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "انقر على أي منتج أدناه لملء الباركود وتجربة التعبئة الفورية:",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-                            )
-
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                val demoList = listOf(
-                                    "باراسيتامول 500 ملغ" to "6281001234567",
-                                    "أموكسيسيلين شراب" to "6281007890123",
-                                    "حليب طازج كامل الدسم" to "6281031112223",
-                                    "زبادي يوناني طبيعي" to "6281044455566",
-                                    "زيت زيتون ممتاز" to "6281055566677",
-                                    "معقم يدين طبي 70%" to "6281066677788",
-                                    "سائل غسيل الأطباق" to "6281077788899"
-                                )
-                                items(demoList) { (title, code) ->
-                                    Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = MaterialTheme.colorScheme.surface,
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
-                                        modifier = Modifier.clickable {
-                                            manualBarcodeInput = code
-                                        }
-                                    ) {
-                                        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                                            Text(title, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                                            Text(code, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                    }
-                                }
+                                Text("تأكيد واستخدام الباركود", fontWeight = FontWeight.Bold)
                             }
                         }
                     }

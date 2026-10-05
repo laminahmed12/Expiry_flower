@@ -32,38 +32,38 @@ data class ExpiryColorPalette(
 val LightExpiryColors = ExpiryColorPalette(
     danger = DangerRed,
     dangerContainer = DangerRedContainerLight,
-    onDangerText = DangerRed,
+    onDangerText = DangerRedTextLight,
     onDangerBadgeText = Color.White,
     warning = WarningAmber,
     warningContainer = WarningAmberContainerLight,
-    onWarningText = WarningAmber,
+    onWarningText = WarningAmberTextLight,
     onWarningBadgeText = Color.White,
     safe = SafeGreen,
     safeContainer = SafeGreenContainerLight,
-    onSafeText = SafeGreen,
+    onSafeText = SafeGreenTextLight,
     onSafeBadgeText = Color.White,
     medicine = MedicineIndigo,
     medicineContainer = MedicineIndigoContainerLight,
-    onMedicineText = MedicineIndigo,
+    onMedicineText = MedicineIndigoTextLight,
     isDark = false
 )
 
 val DarkExpiryColors = ExpiryColorPalette(
-    danger = DangerRedDark, // #F87171 - soft coral red
-    dangerContainer = DangerRedContainerDark.copy(alpha = 0.55f),
-    onDangerText = DangerRedDark,
-    onDangerBadgeText = Color(0xFF0F172A), // Dark text on bright badge for optimal readability
-    warning = WarningAmberDark, // #FBBF24 - warm amber
-    warningContainer = WarningAmberContainerDark.copy(alpha = 0.55f),
-    onWarningText = WarningAmberDark,
-    onWarningBadgeText = Color(0xFF1E293B), // Dark text on amber badge for optimal readability
-    safe = SafeGreenDark, // #4ADE80 - mint green
-    safeContainer = SafeGreenContainerDark.copy(alpha = 0.55f),
-    onSafeText = SafeGreenDark,
-    onSafeBadgeText = Color(0xFF064E3B),
-    medicine = MedicineIndigoDark, // #A78BFA - pastel lavender
-    medicineContainer = MedicineIndigoContainerDark.copy(alpha = 0.55f),
-    onMedicineText = MedicineIndigoDark,
+    danger = DangerRedDark,
+    dangerContainer = DangerRedContainerDark.copy(alpha = 0.6f),
+    onDangerText = DangerRedTextDark,
+    onDangerBadgeText = Color(0xFF0F172A),
+    warning = WarningAmberDark,
+    warningContainer = WarningAmberContainerDark.copy(alpha = 0.6f),
+    onWarningText = WarningAmberTextDark,
+    onWarningBadgeText = Color(0xFF1E293B),
+    safe = SafeGreenDark,
+    safeContainer = SafeGreenContainerDark.copy(alpha = 0.6f),
+    onSafeText = SafeGreenTextDark,
+    onSafeBadgeText = Color(0xFF042F2E),
+    medicine = MedicineIndigoDark,
+    medicineContainer = MedicineIndigoContainerDark.copy(alpha = 0.6f),
+    onMedicineText = MedicineIndigoTextDark,
     isDark = true
 )
 
@@ -77,16 +77,17 @@ object ExpiryTheme {
 }
 
 private val DarkColorScheme = darkColorScheme(
-    primary = EmeraldPrimaryDark,
-    onPrimary = EmeraldOnPrimaryDark,
-    primaryContainer = EmeraldPrimaryContainerDark,
-    onPrimaryContainer = EmeraldOnPrimaryContainerDark,
-    secondary = SecondaryBlueDark,
+    primary = BeepMintPrimaryDark,
+    onPrimary = BeepMintOnPrimaryDark,
+    primaryContainer = BeepMintPrimaryContainerDark,
+    onPrimaryContainer = BeepMintOnPrimaryContainerDark,
+    secondary = BeepSecondaryDark,
     tertiary = WarningAmberDark,
     background = BackgroundDark,
     surface = SurfaceDark,
     surfaceVariant = SurfaceVariantDark,
-    outlineVariant = OutlineVariantDark,
+    outline = OutlineVariantDark,
+    outlineVariant = OutlineVariantDark.copy(alpha = 0.6f),
     onBackground = TextPrimaryDark,
     onSurface = TextPrimaryDark,
     onSurfaceVariant = TextSecondaryDark,
@@ -94,16 +95,17 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = EmeraldPrimaryLight,
-    onPrimary = EmeraldOnPrimaryLight,
-    primaryContainer = EmeraldPrimaryContainerLight,
-    onPrimaryContainer = EmeraldOnPrimaryContainerLight,
-    secondary = SecondaryBlueLight,
+    primary = BeepMintPrimaryLight,
+    onPrimary = BeepMintOnPrimaryLight,
+    primaryContainer = BeepMintPrimaryContainerLight,
+    onPrimaryContainer = BeepMintOnPrimaryContainerLight,
+    secondary = BeepSecondaryLight,
     tertiary = WarningAmber,
     background = BackgroundLight,
     surface = SurfaceLight,
     surfaceVariant = SurfaceVariantLight,
-    outlineVariant = Color(0xFFE2E8F0),
+    outline = OutlineLight,
+    outlineVariant = OutlineLight.copy(alpha = 0.7f),
     onBackground = TextPrimaryLight,
     onSurface = TextPrimaryLight,
     onSurfaceVariant = TextSecondaryLight,
