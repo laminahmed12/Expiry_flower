@@ -173,7 +173,7 @@ private fun LegacyAdreemkSplash() {
             Spacer(Modifier.height(22.dp))
             Text("ADREEMK", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
-            Text("تنبيه الصلاحية", color = Color.White.copy(alpha = 0.82f), fontSize = 15.sp)
+            Text("صلاحيات المواد", color = Color.White.copy(alpha = 0.82f), fontSize = 15.sp)
             Spacer(Modifier.height(28.dp))
             LinearProgressIndicator(
                 modifier = Modifier
