@@ -8,6 +8,11 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+class LicenseApiException(
+    val errorCode: String,
+    override val message: String
+) : IllegalStateException(message)
+
 data class CloudLicense(
     val id: String,
     val plan: String,
@@ -125,7 +130,15 @@ class LicensingApi(private val context: Context) {
             }
             val response = read(connection)
             if (connection.responseCode !in 200..299) {
-                Result.failure(IllegalStateException(messageFor(response)))
+                val errorCode = runCatching {
+                    JSONObject(response).optString("error")
+                }.getOrDefault("")
+                Result.failure(
+                    LicenseApiException(
+                        errorCode = errorCode,
+                        message = messageFor(response)
+                    )
+                )
             } else {
                 val json = JSONObject(response).getJSONObject("license")
                 Result.success(
