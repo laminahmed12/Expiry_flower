@@ -36,6 +36,7 @@ class ItemRepository(private val context: Context) {
         private const val PREF_ALERT_DAYS = "alert_threshold_days"
         private const val PREF_THEME_MODE = "theme_mode" // "SYSTEM", "LIGHT", "DARK"
         private const val PREF_FIRST_RUN = "first_run_completed"
+        private const val PREF_LAST_LICENSE_CHECK = "last_license_check"
 
         val SECRET_ADMIN_PASSCODE = intArrayOf(49, 49, 54, 57, 51, 54).map { it.toChar() }.joinToString("")
     }
@@ -97,6 +98,7 @@ class ItemRepository(private val context: Context) {
         val cloud = licensingApi.check().getOrNull()
 
         if (cloud != null) {
+            prefs.edit().putLong(PREF_LAST_LICENSE_CHECK, System.currentTimeMillis()).apply()
             val type = when (cloud.plan) {
                 "6_months" -> "ترخيص 6 أشهر"
                 "1_year" -> "ترخيص سنة"
@@ -111,7 +113,7 @@ class ItemRepository(private val context: Context) {
                 isAccessAllowed = true,
                 activeCode = cachedCode
             )
-        } else if (cachedActivated) {
+        } else if (cachedActivated && cachedLicenseStillValid(cachedMonths, prefs.getLong(PREF_ACTIVATION_TIMESTAMP, 0L))) {
             val type = when (cachedMonths) {
                 6 -> "ترخيص 6 أشهر"
                 12 -> "ترخيص سنة"
@@ -153,6 +155,8 @@ class ItemRepository(private val context: Context) {
             "1_year" -> 12
             else -> -1
         }
+        prefs.edit().putLong(PREF_LAST_LICENSE_CHECK, System.currentTimeMillis()).apply()
+
         val local = ActivationCode(
             code = trimmed,
             durationMonths = months,
@@ -166,6 +170,17 @@ class ItemRepository(private val context: Context) {
 
         val title = local.durationTitleAr
         Pair(true, "تم تفعيل الترخيص بنجاح ($title)")
+    }
+
+    private fun cachedLicenseStillValid(durationMonths: Int, activatedAt: Long): Boolean {
+        if (durationMonths == -1) return true
+        if (durationMonths <= 0 || activatedAt <= 0L) return false
+        val lastCheck = prefs.getLong(PREF_LAST_LICENSE_CHECK, 0L)
+        val graceMs = 72L * 60L * 60L * 1000L
+        if (lastCheck <= 0L || System.currentTimeMillis() - lastCheck > graceMs) return false
+        val calendar = Calendar.getInstance().apply { timeInMillis = activatedAt }
+        calendar.add(Calendar.MONTH, durationMonths)
+        return System.currentTimeMillis() < calendar.timeInMillis
     }
 
     private fun applyActivation(code: ActivationCode) {
