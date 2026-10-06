@@ -25,6 +25,10 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -45,6 +49,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.layout.Arrangement
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
@@ -115,25 +121,31 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme(themeMode = themeMode) {
                 if (showSplash) {
                     LegacyAdreemkSplash()
+                } else if (!viewModel.licenseStatus.collectAsState().value.isAccessAllowed) {
+                    LicenseRequiredScreen(
+                        onActivated = { viewModel.refreshLicenseStatus() },
+                        activate = { code, done -> viewModel.activateLicense(code, done) }
+                    )
                 } else {
-                // Ensure natural Arabic RTL orientation
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                        contentWindowInsets = WindowInsets.safeDrawing,
-                        snackbarHost = { SnackbarHost(snackbarHostState) }
-                    ) { innerPadding ->
-                        Crossfade(
-                            targetState = currentScreen,
-                            label = "screen_transition",
-                            modifier = Modifier.padding(innerPadding)
-                        ) { screen ->
-                            when (screen) {
-                                Screen.HOME -> HomeScreen(viewModel = viewModel)
-                                Screen.ADD_EDIT -> AddEditItemScreen(viewModel = viewModel)
-                                Screen.BARCODE_SCANNER -> BarcodeScannerScreen(viewModel = viewModel)
-                                Screen.SETTINGS -> AlertSettingsScreen(viewModel = viewModel)
-                                Screen.ADREEMK_ADMIN -> AdreemkAdminScreen(viewModel = viewModel)
+                    // Ensure natural Arabic RTL orientation
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                            contentWindowInsets = WindowInsets.safeDrawing,
+                            snackbarHost = { SnackbarHost(snackbarHostState) }
+                        ) { innerPadding ->
+                            Crossfade(
+                                targetState = currentScreen,
+                                label = "screen_transition",
+                                modifier = Modifier.padding(innerPadding)
+                            ) { screen ->
+                                when (screen) {
+                                    Screen.HOME -> HomeScreen(viewModel = viewModel)
+                                    Screen.ADD_EDIT -> AddEditItemScreen(viewModel = viewModel)
+                                    Screen.BARCODE_SCANNER -> BarcodeScannerScreen(viewModel = viewModel)
+                                    Screen.SETTINGS -> AlertSettingsScreen(viewModel = viewModel)
+                                    Screen.ADREEMK_ADMIN -> AdreemkAdminScreen(viewModel = viewModel)
+                                }
                             }
                         }
                     }
@@ -185,4 +197,65 @@ private fun LegacyAdreemkSplash() {
         }
     }
 }
+}
+@Composable
+private fun LicenseRequiredScreen(
+    onActivated: () -> Unit,
+    activate: (String, (Boolean, String) -> Unit) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    var code by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color(0xFFF5F8FC)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text("انتهت صلاحية استخدام التطبيق", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0B1F3A))
+                Text("لا يمكن متابعة استخدام التطبيق قبل تفعيل ترخيص صالح.", fontSize = 15.sp, color = Color.DarkGray)
+                Button(onClick = { error = null; showDialog = true }) { Text("تفعيل التطبيق") }
+            }
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("تفعيل ترخيص التطبيق") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("أدخل رمز التفعيل الممنوح لك.")
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = { code = it; error = null },
+                        singleLine = true,
+                        label = { Text("رمز التفعيل") },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Ascii)
+                    )
+                    error?.let { Text(it, color = Color(0xFFB3261E)) }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (code.isBlank()) { error = "يرجى إدخال رمز التفعيل"; return@Button }
+                    activate(code) { success, message ->
+                        if (success) {
+                            showDialog = false
+                            code = ""
+                            onActivated()
+                        } else {
+                            error = message
+                        }
+                    }
+                }) { Text("تفعيل") }
+            },
+            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("إلغاء") } }
+        )
+    }
 }
