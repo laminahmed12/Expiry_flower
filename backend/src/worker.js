@@ -7,10 +7,52 @@ const json = (data, status = 200) =>
       "access-control-allow-headers":
         "Content-Type, Authorization, X-Owner-Pin",
       "access-control-allow-methods": "GET, POST, OPTIONS",
+      "cache-control": "no-store",
     },
   });
 
 const now = () => new Date().toISOString();
+
+/**
+ * Add calendar months without overflowing into the following month.
+ * Example: Jan 31 + 1 month => Feb 28/29.
+ */
+function addCalendarMonths(isoDate, months) {
+  const source = new Date(isoDate);
+  if (Number.isNaN(source.getTime())) {
+    throw new Error("invalid_issued_at");
+  }
+
+  const year = source.getUTCFullYear();
+  const month = source.getUTCMonth();
+  const day = source.getUTCDate();
+
+  const target = new Date(Date.UTC(
+    year,
+    month + months,
+    1,
+    source.getUTCHours(),
+    source.getUTCMinutes(),
+    source.getUTCSeconds(),
+    source.getUTCMilliseconds()
+  ));
+
+  const lastDay = new Date(Date.UTC(
+    target.getUTCFullYear(),
+    target.getUTCMonth() + 1,
+    0
+  )).getUTCDate();
+
+  target.setUTCDate(Math.min(day, lastDay));
+  return target.toISOString();
+}
+
+function calculateExpiry(issuedAt, plan) {
+  if (plan === "permanent") return null;
+  if (plan === "6_months") return addCalendarMonths(issuedAt, 6);
+  if (plan === "1_year") return addCalendarMonths(issuedAt, 12);
+  throw new Error("invalid_plan");
+}
 
 async function sha256(value) {
   const bytes = new TextEncoder().encode(value);
@@ -22,11 +64,17 @@ async function sha256(value) {
 }
 
 function auth(request, env) {
-  const authorization = request.headers.get("Authorization") || "";
-  const ownerPin = request.headers.get("X-Owner-Pin") || "";
+  // Normalize both incoming headers and configured secrets.
+  // This avoids false authentication failures caused by accidental whitespace.
+  const authorization =
+    (request.headers.get("Authorization") || "").trim();
+  const ownerPin =
+    (request.headers.get("X-Owner-Pin") || "").trim();
 
-  const configuredPin = env.OWNER_PIN || "";
-  const configuredAdminKey = env.ADMIN_API_KEY || "";
+  const configuredPin =
+    String(env.OWNER_PIN || "").trim();
+  const configuredAdminKey =
+    String(env.ADMIN_API_KEY || "").trim();
 
   const adminKeyOk =
     configuredAdminKey &&
@@ -94,6 +142,43 @@ async function ensureSchema(env) {
       created_at TEXT NOT NULL
     )
   `).run();
+
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS schema_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `).run();
+
+  // One-time correction for licenses created by the old 183/365-day logic.
+  const expiryMigration = await env.DB
+    .prepare("SELECT value FROM schema_meta WHERE key = ?")
+    .bind("calendar_expiry_v1")
+    .first();
+
+  if (!expiryMigration) {
+    const { results = [] } = await env.DB
+      .prepare(`
+        SELECT id, plan, issued_at
+        FROM licenses
+        WHERE plan IN ('6_months', '1_year')
+      `)
+      .all();
+
+    const statements = results.map((row) =>
+      env.DB
+        .prepare("UPDATE licenses SET expires_at = ? WHERE id = ?")
+        .bind(calculateExpiry(row.issued_at, row.plan), row.id)
+    );
+
+    statements.push(
+      env.DB
+        .prepare("INSERT OR REPLACE INTO schema_meta(key, value) VALUES(?, ?)")
+        .bind("calendar_expiry_v1", now())
+    );
+
+    await env.DB.batch(statements);
+  }
 }
 
 export default {
@@ -123,7 +208,7 @@ export default {
         return json({
           ok: true,
           service: "ADREEMK Licensing API",
-          version: "1.1.0",
+          version: "1.2.0",
         });
       }
 
@@ -439,21 +524,7 @@ export default {
 
         let expires = null;
 
-        if (plan === "6_months") {
-          expires =
-            new Date(
-              Date.now() +
-                183 * 864e5
-            ).toISOString();
-        }
-
-        if (plan === "1_year") {
-          expires =
-            new Date(
-              Date.now() +
-                365 * 864e5
-            ).toISOString();
-        }
+        expires = calculateExpiry(issued, plan);
 
         /*
          * حفظ الترخيص
@@ -559,49 +630,6 @@ export default {
           ok: true,
           licenses: results,
         });
-      }
-
-      /*
-       * إيقاف أو إعادة تنشيط ترخيص - المالك
-       */
-      if (
-        url.pathname === "/v1/admin/licenses/revoke" &&
-        request.method === "POST"
-      ) {
-        if (!auth(request, env)) {
-          return json({ ok: false, error: "unauthorized" }, 401);
-        }
-
-        const body = await request.json();
-        const code = String(body.code || "").trim().toUpperCase();
-        const revoke = body.revoke !== false;
-
-        if (!code) {
-          return json({ ok: false, error: "code_required" }, 400);
-        }
-
-        const hash = await sha256(code);
-        const row = await env.DB
-          .prepare("SELECT id FROM licenses WHERE license_code_hash = ?")
-          .bind(hash)
-          .first();
-
-        if (!row) {
-          return json({ ok: false, error: "license_not_found" }, 404);
-        }
-
-        const status = revoke ? "revoked" : "active";
-        await env.DB
-          .prepare("UPDATE licenses SET status = ? WHERE id = ?")
-          .bind(status, row.id)
-          .run();
-
-        await env.DB
-          .prepare("INSERT INTO audit_logs(action,license_id,details,created_at) VALUES(?,?,?,?)")
-          .bind(revoke ? "revoke" : "unrevoke", row.id, "owner action", now())
-          .run();
-
-        return json({ ok: true, status });
       }
 
       /*
