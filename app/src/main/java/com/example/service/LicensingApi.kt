@@ -54,7 +54,8 @@ class LicensingApi(private val context: Context) {
         return try {
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("X-Owner-Pin", ownerPin.trim())
-            // دعم الخادم القديم الذي كان يستخدم ADMIN_API_KEY عبر Bearer.\n            connection.setRequestProperty("Authorization", "Bearer ${ownerPin.trim()}")
+            // دعم الخادم القديم الذي كان يستخدم ADMIN_API_KEY عبر Bearer.
+            connection.setRequestProperty("Authorization", "Bearer ${ownerPin.trim()}")
             connection.doOutput = true
             connection.outputStream.use {
                 it.write(
