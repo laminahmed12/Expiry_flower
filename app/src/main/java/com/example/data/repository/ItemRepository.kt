@@ -7,6 +7,7 @@ import com.example.data.model.ActivationCode
 import com.example.data.model.ItemCategory
 import com.example.data.model.LicenseStatus
 import com.example.data.model.StoredItem
+import com.example.service.LicenseApiException
 import com.example.service.LicensingApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -98,7 +99,9 @@ class ItemRepository(private val context: Context) {
         val cachedCode = prefs.getString(PREF_ACTIVE_CODE, null)
         val cachedMonths = prefs.getInt(PREF_DURATION_MONTHS, 0)
         val cachedActivated = prefs.getBoolean(PREF_IS_ACTIVATED, false)
-        val cloud = licensingApi.check().getOrNull()
+        val cloudResult = licensingApi.check()
+        val cloud = cloudResult.getOrNull()
+        val licenseError = cloudResult.exceptionOrNull()
 
         if (cloud != null) {
             prefs.edit().putLong(PREF_LAST_LICENSE_CHECK, System.currentTimeMillis()).apply()
@@ -115,6 +118,31 @@ class ItemRepository(private val context: Context) {
                 licenseExpiryFormatted = if (cloud.permanent) "صالح مدى الحياة" else LicenseDisplayUtils.formatExpiryDate(cloud.expiresAt),
                 isAccessAllowed = true,
                 activeCode = cachedCode
+            )
+        } else if (
+            cachedActivated &&
+            licenseError is LicenseApiException &&
+            licenseError.errorCode in setOf("license_not_found", "license_expired", "device_mismatch")
+        ) {
+            // الخادم أكد أن الترخيص لم يعد صالحاً؛ لا نستخدم فترة السماح المحلية.
+            prefs.edit()
+                .putBoolean(PREF_IS_ACTIVATED, false)
+                .remove(PREF_ACTIVE_CODE)
+                .remove(PREF_DURATION_MONTHS)
+                .remove(PREF_ACTIVATION_TIMESTAMP)
+                .apply()
+
+            LicenseStatus(
+                isTrialActive = false,
+                trialDaysRemaining = 0,
+                isLicensed = false,
+                licenseType = when (licenseError.errorCode) {
+                    "license_expired" -> "انتهت صلاحية الترخيص"
+                    "device_mismatch" -> "الترخيص مرتبط بجهاز آخر"
+                    else -> "الترخيص غير صالح"
+                },
+                licenseExpiryFormatted = null,
+                isAccessAllowed = false
             )
         } else if (cachedActivated && cachedLicenseStillValid(cachedMonths, prefs.getLong(PREF_ACTIVATION_TIMESTAMP, 0L))) {
             val type = when (cachedMonths) {
