@@ -37,6 +37,8 @@ class ItemRepository(private val context: Context) {
         private const val PREF_THEME_MODE = "theme_mode" // "SYSTEM", "LIGHT", "DARK"
         private const val PREF_FIRST_RUN = "first_run_completed"
         private const val PREF_LAST_LICENSE_CHECK = "last_license_check"
+        private const val PREF_TRIAL_START = "trial_start_timestamp"
+        private const val TRIAL_DURATION_DAYS = 10
 
         val SECRET_ADMIN_PASSCODE = intArrayOf(49, 49, 54, 57, 51, 54).map { it.toChar() }.joinToString("")
     }
@@ -129,7 +131,40 @@ class ItemRepository(private val context: Context) {
                 isAccessAllowed = true,
                 activeCode = cachedCode
             )
+        } else if (cachedCode.isNullOrBlank()) {
+            // جهاز جديد بلا ترخيص: منح فترة تجريبية مجانية لمدة 10 أيام.
+            // يبدأ العداد مرة واحدة فقط ولا يُعاد عند كل تشغيل للتطبيق.
+            val now = System.currentTimeMillis()
+            val trialStart = prefs.getLong(PREF_TRIAL_START, 0L).let { saved ->
+                if (saved > 0L) saved else {
+                    prefs.edit().putLong(PREF_TRIAL_START, now).apply()
+                    now
+                }
+            }
+            val trialEnd = trialStart + TRIAL_DURATION_DAYS * 24L * 60L * 60L * 1000L
+            val remainingMs = trialEnd - now
+            val remainingDays = kotlin.math.ceil(remainingMs / (24.0 * 60L * 60L * 1000L)).toInt()
+            if (remainingDays > 0) {
+                LicenseStatus(
+                    isTrialActive = true,
+                    trialDaysRemaining = remainingDays,
+                    isLicensed = false,
+                    licenseType = "فترة تجريبية",
+                    licenseExpiryFormatted = null,
+                    isAccessAllowed = true
+                )
+            } else {
+                LicenseStatus(
+                    isTrialActive = false,
+                    trialDaysRemaining = 0,
+                    isLicensed = false,
+                    licenseType = "انتهت الفترة التجريبية",
+                    licenseExpiryFormatted = null,
+                    isAccessAllowed = false
+                )
+            }
         } else {
+            // يوجد ترخيص سابق محلياً لكنه غير صالح/منتهي/مسحوب؛ لا نعيد منح التجربة.
             LicenseStatus(
                 isTrialActive = false,
                 trialDaysRemaining = 0,
