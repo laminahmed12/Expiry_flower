@@ -77,6 +77,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.MainViewModel
+import com.example.util.LicenseDisplayUtils
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -822,7 +823,7 @@ fun AlertSettingsScreen(
                             }
                             licenseStatus.activeCode?.let {
                                 Text(
-                                    text = "الرمز المفعل: $it",
+                                    text = "الرمز المفعل: ${LicenseDisplayUtils.maskLicenseCode(it)}",
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.primary
                                 )
