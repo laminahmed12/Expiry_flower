@@ -15,6 +15,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import com.example.util.LicenseDisplayUtils
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -111,7 +112,7 @@ class ItemRepository(private val context: Context) {
                 trialDaysRemaining = 0,
                 isLicensed = true,
                 licenseType = type,
-                licenseExpiryFormatted = if (cloud.permanent) "صالح مدى الحياة" else cloud.expiresAt,
+                licenseExpiryFormatted = if (cloud.permanent) "صالح مدى الحياة" else LicenseDisplayUtils.formatExpiryDate(cloud.expiresAt),
                 isAccessAllowed = true,
                 activeCode = cachedCode
             )
@@ -127,7 +128,7 @@ class ItemRepository(private val context: Context) {
                 trialDaysRemaining = 0,
                 isLicensed = true,
                 licenseType = type,
-                licenseExpiryFormatted = if (cachedMonths == -1) "صالح مدى الحياة" else "تم التحقق محلياً",
+                licenseExpiryFormatted = if (cachedMonths == -1) "صالح مدى الحياة" else formatCachedExpiryDate(cachedMonths, prefs.getLong(PREF_ACTIVATION_TIMESTAMP, 0L)),
                 isAccessAllowed = true,
                 activeCode = cachedCode
             )
@@ -205,6 +206,18 @@ class ItemRepository(private val context: Context) {
 
         val title = local.durationTitleAr
         Pair(true, "تم تفعيل الترخيص بنجاح ($title)")
+    }
+
+    private fun formatCachedExpiryDate(durationMonths: Int, activatedAt: Long): String {
+        if (durationMonths == -1) return "صالح مدى الحياة"
+        if (durationMonths <= 0 || activatedAt <= 0L) return "غير متاح"
+
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = activatedAt
+            add(Calendar.MONTH, durationMonths)
+        }
+        val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        return formatter.format(Date(calendar.timeInMillis))
     }
 
     private fun cachedLicenseStillValid(durationMonths: Int, activatedAt: Long): Boolean {
