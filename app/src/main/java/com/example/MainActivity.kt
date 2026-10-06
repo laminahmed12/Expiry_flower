@@ -197,7 +197,6 @@ private fun LegacyAdreemkSplash() {
         }
     }
 }
-}
 @Composable
 private fun LicenseRequiredScreen(
     onActivated: () -> Unit,
