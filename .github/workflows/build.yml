@@ -1,4 +1,4 @@
-name: Build ADREEMK APK
+name: Build ADREEMK Release APK
 
 on:
   push:
@@ -23,26 +23,55 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Generate Debug Keystore
+    - name: Generate release signing key for this release
       run: |
-        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        keytool -genkeypair -v \
+          -keystore release.keystore \
+          -storepass "${{ secrets.RELEASE_STORE_PASSWORD || 'ExpiryGuardRelease2026' }}" \
+          -alias "${{ secrets.RELEASE_KEY_ALIAS || 'expiryguard' }}" \
+          -keypass "${{ secrets.RELEASE_KEY_PASSWORD || 'ExpiryGuardRelease2026' }}" \
+          -keyalg RSA -keysize 4096 -validity 10000 \
+          -dname "CN=ADREEMK ExpiryGuard, OU=Release, O=ADREEMK, C=LY"
 
     - name: Generate Gradle Wrapper
       run: gradle wrapper
 
-    - name: Build APK
+    - name: Build signed release APK
+      env:
+        KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
+        STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD || 'ExpiryGuardRelease2026' }}
+        KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS || 'expiryguard' }}
+        KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || 'ExpiryGuardRelease2026' }}
       run: chmod +x gradlew && ./gradlew assembleRelease --stacktrace
 
-    - name: Prepare shareable APK
+    - name: Verify release artifact
+      run: |
+        test -s app/build/outputs/apk/release/app-release.apk
+        sha256sum app/build/outputs/apk/release/app-release.apk | tee app-release.sha256
+
+    - name: Prepare commercial release package
       run: |
         mkdir -p dist
-        cp app/build/outputs/apk/release/app-release.apk dist/ADREEMK-ExpiryGuard-v1.0.1.apk
-        sha256sum dist/ADREEMK-ExpiryGuard-v1.0.1.apk > dist/ADREEMK-ExpiryGuard-v1.0.1.sha256
+        cp app/build/outputs/apk/release/app-release.apk dist/ADREEMK-ExpiryGuard-v1.0.2.apk
+        cp app-release.sha256 dist/ADREEMK-ExpiryGuard-v1.0.2.sha256
+        keytool -list -v -keystore release.keystore \
+          -storepass "${{ secrets.RELEASE_STORE_PASSWORD || 'ExpiryGuardRelease2026' }}" \
+          -alias "${{ secrets.RELEASE_KEY_ALIAS || 'expiryguard' }}" \
+          | grep -E "Alias name:|Entry type:|SHA256:" > dist/signing-fingerprint.txt
+        cat > dist/RELEASE-NOTES.txt <<'EOF'
+ADREEMK ExpiryGuard 1.0.2
+Commercial Android release for direct distribution outside Google Play.
 
-    - name: Upload APK artifact
+Important:
+- Preserve the signing keystore and its passwords for all future updates.
+- Do not publish the keystore publicly.
+- APK SHA-256 is included in the accompanying .sha256 file.
+EOF
+
+    - name: Upload commercial release
       uses: actions/upload-artifact@v4
       with:
-        name: ADREEMK-ExpiryGuard-v1.0.1
+        name: ADREEMK-ExpiryGuard-v1.0.2
         path: dist/
         if-no-files-found: error
-        retention-days: 30
+        retention-days: 90
