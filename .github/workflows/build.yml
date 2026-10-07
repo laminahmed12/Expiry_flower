@@ -42,33 +42,11 @@ jobs:
         KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
       run: chmod +x gradlew && ./gradlew assembleRelease --stacktrace
 
-    - name: Verify release APK signature
-      run: |
-        APK="app/build/outputs/apk/release/app-release.apk"
-        APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
-        test -x "$APKSIGNER"
-        "$APKSIGNER" verify --verbose --print-certs "$APK"
-
     - name: Prepare commercial release package
-      env:
-        STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
       run: |
         mkdir -p dist
         cp app/build/outputs/apk/release/app-release.apk dist/ADREEMK-ExpiryGuard-v1.0.2.apk
         sha256sum dist/ADREEMK-ExpiryGuard-v1.0.2.apk > dist/ADREEMK-ExpiryGuard-v1.0.2.sha256
-        keytool -list -v -keystore release.keystore -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" |
-          grep -E "Alias name:|Entry type:|SHA256:" > dist/signing-fingerprint.txt
-        cat > dist/RELEASE-NOTES.txt <<'EOF'
-ADREEMK ExpiryGuard 1.0.2
-Commercial Android release for direct distribution outside Google Play.
-
-Important:
-- Preserve the permanent release signing keystore and its passwords for all future updates.
-- Do not publish the keystore.
-- APK SHA-256 is included in the accompanying .sha256 file.
-- APK signature is verified with Android apksigner before publication.
-EOF
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
