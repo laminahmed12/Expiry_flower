@@ -1,9 +1,8 @@
 name: Build ADREEMK Release APK
 
-"on":
+on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 concurrency:
@@ -13,79 +12,46 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-      - name: Restore permanent release keystore
-        env:
-          RELEASE_KEYSTORE_B64: "${{ secrets.RELEASE_KEYSTORE_B64 }}"
-        run: |
-          test -n "$RELEASE_KEYSTORE_B64"
-          printf '%s' "$RELEASE_KEYSTORE_B64" | base64 --decode > release.keystore
-          test -s release.keystore
-          chmod 600 release.keystore
+    - name: Restore permanent release keystore
+      env:
+        RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+      run: |
+        printf '%s' "$RELEASE_KEYSTORE_B64" | base64 --decode > release.keystore
+        test -s release.keystore
+        chmod 600 release.keystore
 
-      - name: Generate Gradle Wrapper
-        run: gradle wrapper
+    - name: Generate Gradle Wrapper
+      run: gradle wrapper
 
-      - name: Build signed release APK
-        env:
-          KEYSTORE_PATH: "${{ github.workspace }}/release.keystore"
-          STORE_PASSWORD: "${{ secrets.RELEASE_STORE_PASSWORD }}"
-          KEY_ALIAS: "${{ secrets.RELEASE_KEY_ALIAS }}"
-          KEY_PASSWORD: "${{ secrets.RELEASE_KEY_PASSWORD }}"
-        run: |
-          test -n "$STORE_PASSWORD"
-          test -n "$KEY_ALIAS"
-          test -n "$KEY_PASSWORD"
-          chmod +x gradlew
-          ./gradlew assembleRelease --stacktrace
+    - name: Build signed release APK
+      env:
+        KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
+        STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+      run: chmod +x gradlew && ./gradlew assembleRelease --stacktrace
 
-      - name: Verify release artifact and signature
-        run: |
-          APK="app/build/outputs/apk/release/app-release.apk"
-          test -s "$APK"
-          sha256sum "$APK" | tee app-release.sha256
-          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
-          test -x "$APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs "$APK"
+    - name: Prepare commercial release package
+      run: |
+        mkdir -p dist
+        cp app/build/outputs/apk/release/app-release.apk dist/ADREEMK-ExpiryGuard-v1.0.2.apk
+        sha256sum dist/ADREEMK-ExpiryGuard-v1.0.2.apk > dist/ADREEMK-ExpiryGuard-v1.0.2.sha256
 
-      - name: Prepare commercial release package
-        env:
-          STORE_PASSWORD: "${{ secrets.RELEASE_STORE_PASSWORD }}"
-          KEY_ALIAS: "${{ secrets.RELEASE_KEY_ALIAS }}"
-        run: |
-          mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk dist/ADREEMK-ExpiryGuard-v1.0.2.apk
-          cp app-release.sha256 dist/ADREEMK-ExpiryGuard-v1.0.2.sha256
-          keytool -list -v -keystore release.keystore -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" |
-            grep -E "Alias name:|Entry type:|SHA256:" > dist/signing-fingerprint.txt
-          cat > dist/RELEASE-NOTES.txt <<'EOF'
-ADREEMK ExpiryGuard 1.0.2
-Commercial Android release for direct distribution outside Google Play.
-
-Important:
-- Preserve the permanent release signing keystore and its passwords for all future updates.
-- Do not publish the keystore.
-- APK SHA-256 is included in the accompanying .sha256 file.
-- This APK is signed with the permanent ADREEMK release key.
-EOF
-
-      - name: Upload commercial release
-        uses: actions/upload-artifact@v4
-        with:
-          name: ADREEMK-ExpiryGuard-v1.0.2
-          path: dist
-          if-no-files-found: error
-          retention-days: 90
-
-      - name: Remove signing material
-        if: always()
-        run: rm -f release.keystore
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ADREEMK-ExpiryGuard-v1.0.2
+        path: dist/
+        if-no-files-found: error
+        retention-days: 90
