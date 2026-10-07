@@ -40,7 +40,7 @@ class ItemRepository(private val context: Context) {
         private const val PREF_FIRST_RUN = "first_run_completed"
         private const val PREF_LAST_LICENSE_CHECK = "last_license_check"
         private const val PREF_TRIAL_START = "trial_start_timestamp"
-        private const val TRIAL_DURATION_DAYS = 10
+        private const val TRIAL_DURATION_DAYS = 7
 
         val SECRET_ADMIN_PASSCODE = intArrayOf(49, 49, 54, 57, 51, 54).map { it.toChar() }.joinToString("")
     }
@@ -450,8 +450,11 @@ class ItemRepository(private val context: Context) {
 
     // --- Clean and purge all dummy / sample data ---
     suspend fun populateInitialDataIfEmpty() = withContext(Dispatchers.IO) {
-        prefs.edit().putBoolean(PREF_FIRST_RUN, true).apply()
-        purgeAllSampleData()
+        // لا نحذف أي بيانات تلقائياً عند التشغيل.
+        // تنظيف البيانات التجريبية يتم يدوياً من لوحة الإدارة فقط.
+        if (!prefs.getBoolean(PREF_FIRST_RUN, false)) {
+            prefs.edit().putBoolean(PREF_FIRST_RUN, true).apply()
+        }
     }
 
     suspend fun purgeAllSampleData() = withContext(Dispatchers.IO) {
