@@ -44,11 +44,44 @@ jobs:
 
     - name: Prepare commercial release package
       run: |
+        set -e
         mkdir -p dist
-        cp app/build/outputs/apk/release/app-release.apk dist/ADREEMK-ExpiryGuard-v1.0.2.apk
-        sha256sum dist/ADREEMK-ExpiryGuard-v1.0.2.apk > dist/ADREEMK-ExpiryGuard-v1.0.2.sha256
+        APK="app/build/outputs/apk/release/app-release.apk"
+        OUT="dist/ADREEMK-ExpiryGuard-v1.0.2.apk"
+        cp "$APK" "$OUT"
 
-    - name: Upload APK artifact
+        sha256sum "$OUT" > dist/ADREEMK-ExpiryGuard-v1.0.2.sha256
+        SHA256=$(cut -d ' ' -f1 dist/ADREEMK-ExpiryGuard-v1.0.2.sha256)
+        SIZE=$(stat -c%s "$OUT")
+
+        cat > dist/ADREEMK-ExpiryGuard-v1.0.2-RELEASE-INFO.txt <<EOF
+ADREEMK ExpiryGuard
+Commercial Release Package
+Version: 1.0.2
+Application ID: com.aistudio.expiryguard.kspwvx
+Build type: Release
+Distribution: Direct APK
+
+APK file:
+ADREEMK-ExpiryGuard-v1.0.2.apk
+
+SHA-256:
+$SHA256
+
+APK size (bytes):
+$SIZE
+
+Verification:
+Calculate SHA-256 for the downloaded APK and compare it with the SHA-256 value above.
+If the values match exactly, the APK file is intact and unchanged.
+
+This file belongs to the same build package as the APK and checksum file.
+EOF
+
+        cd dist
+        zip -q ADREEMK-ExpiryGuard-v1.0.2-COMMERCIAL.zip           ADREEMK-ExpiryGuard-v1.0.2.apk           ADREEMK-ExpiryGuard-v1.0.2.sha256           ADREEMK-ExpiryGuard-v1.0.2-RELEASE-INFO.txt
+
+    - name: Upload commercial release package
       uses: actions/upload-artifact@v4
       with:
         name: ADREEMK-ExpiryGuard-v1.0.2
