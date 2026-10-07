@@ -23,12 +23,12 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Generate release signing key for this release
+    - name: Generate release signing key
       run: |
         keytool -genkeypair -v \
           -keystore release.keystore \
           -storepass "${{ secrets.RELEASE_STORE_PASSWORD || 'ExpiryGuardRelease2026' }}" \
-          -alias "${{ secrets.RELEASE_KEY_ALIAS || 'expiryguard' }}" \
+          -alias "upload" \
           -keypass "${{ secrets.RELEASE_KEY_PASSWORD || 'ExpiryGuardRelease2026' }}" \
           -keyalg RSA -keysize 4096 -validity 10000 \
           -dname "CN=ADREEMK ExpiryGuard, OU=Release, O=ADREEMK, C=LY"
@@ -40,7 +40,7 @@ jobs:
       env:
         KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
         STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD || 'ExpiryGuardRelease2026' }}
-        KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS || 'expiryguard' }}
+        KEY_ALIAS: upload
         KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || 'ExpiryGuardRelease2026' }}
       run: chmod +x gradlew && ./gradlew assembleRelease --stacktrace
 
@@ -56,15 +56,14 @@ jobs:
         cp app-release.sha256 dist/ADREEMK-ExpiryGuard-v1.0.2.sha256
         keytool -list -v -keystore release.keystore \
           -storepass "${{ secrets.RELEASE_STORE_PASSWORD || 'ExpiryGuardRelease2026' }}" \
-          -alias "${{ secrets.RELEASE_KEY_ALIAS || 'expiryguard' }}" \
-          | grep -E "Alias name:|Entry type:|SHA256:" > dist/signing-fingerprint.txt
+          -alias upload | grep -E "Alias name:|Entry type:|SHA256:" > dist/signing-fingerprint.txt
         cat > dist/RELEASE-NOTES.txt <<'EOF'
 ADREEMK ExpiryGuard 1.0.2
 Commercial Android release for direct distribution outside Google Play.
 
 Important:
-- Preserve the signing keystore and its passwords for all future updates.
-- Do not publish the keystore publicly.
+- Preserve the release signing keystore and its passwords for all future updates.
+- Do not publish the keystore.
 - APK SHA-256 is included in the accompanying .sha256 file.
 EOF
 
