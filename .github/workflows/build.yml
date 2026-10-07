@@ -46,38 +46,12 @@ jobs:
       run: |
         set -e
         mkdir -p dist
-        APK="app/build/outputs/apk/release/app-release.apk"
         OUT="dist/ADREEMK-ExpiryGuard-v1.0.2.apk"
-        cp "$APK" "$OUT"
-
+        cp app/build/outputs/apk/release/app-release.apk "$OUT"
         sha256sum "$OUT" > dist/ADREEMK-ExpiryGuard-v1.0.2.sha256
         SHA256=$(cut -d ' ' -f1 dist/ADREEMK-ExpiryGuard-v1.0.2.sha256)
         SIZE=$(stat -c%s "$OUT")
-
-        cat > dist/ADREEMK-ExpiryGuard-v1.0.2-RELEASE-INFO.txt <<EOF
-ADREEMK ExpiryGuard
-Commercial Release Package
-Version: 1.0.2
-Application ID: com.aistudio.expiryguard.kspwvx
-Build type: Release
-Distribution: Direct APK
-
-APK file:
-ADREEMK-ExpiryGuard-v1.0.2.apk
-
-SHA-256:
-$SHA256
-
-APK size (bytes):
-$SIZE
-
-Verification:
-Calculate SHA-256 for the downloaded APK and compare it with the SHA-256 value above.
-If the values match exactly, the APK file is intact and unchanged.
-
-This file belongs to the same build package as the APK and checksum file.
-EOF
-
+        printf '%s\n'           'ADREEMK ExpiryGuard'           'Commercial Release Package'           'Version: 1.0.2'           'Application ID: com.aistudio.expiryguard.kspwvx'           'Build type: Release'           'Distribution: Direct APK'           ''           'APK: ADREEMK-ExpiryGuard-v1.0.2.apk'           "SHA-256: $SHA256"           "APK size (bytes): $SIZE"           ''           'Verification: calculate SHA-256 for the downloaded APK and compare it with the value above. Matching values confirm the file is intact and unchanged.'           > dist/ADREEMK-ExpiryGuard-v1.0.2-RELEASE-INFO.txt
         cd dist
         zip -q ADREEMK-ExpiryGuard-v1.0.2-COMMERCIAL.zip           ADREEMK-ExpiryGuard-v1.0.2.apk           ADREEMK-ExpiryGuard-v1.0.2.sha256           ADREEMK-ExpiryGuard-v1.0.2-RELEASE-INFO.txt
 
