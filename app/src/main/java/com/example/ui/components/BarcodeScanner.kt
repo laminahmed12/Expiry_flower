@@ -48,7 +48,6 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -377,36 +376,6 @@ fun BarcodeScanner(
                         imageVector = if (isFlashOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
                         contentDescription = "تشغيل/إيقاف الفلاش",
                         tint = if (isFlashOn) Color.Yellow else Color.White
-                    )
-                }
-            }
-
-            // Explanatory Banner: Virtual Camera in Emulator
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = Color.Black.copy(alpha = 0.75f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 70.dp, start = 16.dp, end = 16.dp)
-                    .fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "ملاحظة: المربعات الملونة هي نمط كاميرا المحاكي الافتراضية (Virtual Pattern). على هاتفك الحقيقي ستعمل عدسة الكاميرا الطبيعية.",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp
                     )
                 }
             }
