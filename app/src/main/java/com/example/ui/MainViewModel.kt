@@ -275,6 +275,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _themeMode.value = mode
     }
 
+    fun resetTrialPeriod(onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            try {
+                repository.resetTrialPeriod()
+                refreshLicenseStatus()
+                setMessage("تمت إعادة الفترة التجريبية لمدة 7 أيام.")
+                onResult(true, "تمت إعادة الفترة التجريبية لمدة 7 أيام.")
+            } catch (e: Exception) {
+                val msg = e.message ?: "تعذر إعادة الفترة التجريبية."
+                onResult(false, msg)
+            }
+        }
+    }
+
     fun refreshLicenseStatus() {
         viewModelScope.launch {
             _licenseStatus.value = repository.getLicenseStatus()
