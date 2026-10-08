@@ -320,7 +320,58 @@ fun AdreemkAdminScreen(
                 }
             }
 
-            // 3. Section Title: All Activation Codes
+            // 3. Trial controls
+            item {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(14.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "إعادة الفترة التجريبية",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = "إعادة عداد التجربة إلى 7 أيام لهذا الجهاز، دون حذف المواد أو البيانات.",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.resetTrialPeriod { success, message ->
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.testTag("reset_trial_btn")
+                        ) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("إعادة التجربة", fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+
+            // 4. Section Title: All Activation Codes
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
