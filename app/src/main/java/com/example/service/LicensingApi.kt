@@ -47,6 +47,7 @@ class LicensingApi(private val context: Context) {
         return@withContext try {
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("X-Owner-Pin", ownerPin.trim())
+            connection.setRequestProperty("Authorization", "Bearer ${ownerPin.trim()}")
             connection.doOutput = true
             connection.outputStream.use {
                 it.write(
@@ -206,6 +207,8 @@ class LicensingApi(private val context: Context) {
                 "license_expired" -> "انتهت صلاحية الترخيص."
                 "unauthorized" -> "رمز المالك غير صحيح."
                 "invalid_plan" -> "نوع الترخيص غير صحيح."
+                "device_required" -> "تعذر تحديد الجهاز الحالي."
+                "not_found" -> "خادم الترخيص لا يحتوي على وظيفة فصل الجهاز بعد. يجب نشر تحديث الخادم."
                 else -> "تعذر الاتصال بخادم الترخيص."
             }
         } catch (_: Exception) {
