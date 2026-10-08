@@ -408,8 +408,8 @@ fun BarcodeScanner(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("مسح باركود من صورة في المعرض", color = Color.White, fontSize = 12.sp)
                 }
-
-            } else {
+            }
+        } else {
             // Permission Denied or Required State
             Column(
                 modifier = Modifier
