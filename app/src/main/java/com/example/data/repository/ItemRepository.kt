@@ -161,7 +161,7 @@ class ItemRepository(private val context: Context) {
                 activeCode = cachedCode
             )
         } else if (cachedCode.isNullOrBlank()) {
-            // جهاز جديد بلا ترخيص: منح فترة تجريبية مجانية لمدة 10 أيام.
+            // جهاز جديد بلا ترخيص: منح فترة تجريبية مجانية لمدة 7 أيام.
             // يبدأ العداد مرة واحدة فقط ولا يُعاد عند كل تشغيل للتطبيق.
             val now = System.currentTimeMillis()
             val trialStart = prefs.getLong(PREF_TRIAL_START, 0L).let { saved ->
