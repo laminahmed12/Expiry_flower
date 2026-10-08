@@ -409,32 +409,7 @@ fun BarcodeScanner(
                     Text("مسح باركود من صورة في المعرض", color = Color.White, fontSize = 12.sp)
                 }
 
-                // Status Badge
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color.Black.copy(alpha = 0.75f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CameraAlt,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = detectedBarcode?.let { "تم رصد الباركود: $it" } ?: "وجّه الكاميرا نحو باركود المنتج للمسح المباشر",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-        } else {
+            } else {
             // Permission Denied or Required State
             Column(
                 modifier = Modifier
