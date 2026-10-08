@@ -51,7 +51,7 @@ jobs:
         sha256sum "$OUT" > dist/ADREEMK-ExpiryGuard-v1.0.4.sha256
         SHA256=$(cut -d ' ' -f1 dist/ADREEMK-ExpiryGuard-v1.0.4.sha256)
         SIZE=$(stat -c%s "$OUT")
-        printf '%s\n'           'ADREEMK ExpiryGuard'           'Commercial Release Package'           'Version: 1.0.2'           'Application ID: com.aistudio.expiryguard.kspwvx'           'Build type: Release'           'Distribution: Direct APK'           ''           'APK: ADREEMK-ExpiryGuard-v1.0.4.apk'           "SHA-256: $SHA256"           "APK size (bytes): $SIZE"           ''           'Verification: calculate SHA-256 for the downloaded APK and compare it with the value above. Matching values confirm the file is intact and unchanged.'           > dist/ADREEMK-ExpiryGuard-v1.0.4-RELEASE-INFO.txt
+        printf '%s\n'           'ADREEMK ExpiryGuard'           'Commercial Release Package'           'Version: 1.0.4'           'Application ID: com.aistudio.expiryguard.kspwvx'           'Build type: Release'           'Distribution: Direct APK'           ''           'APK: ADREEMK-ExpiryGuard-v1.0.4.apk'           "SHA-256: $SHA256"           "APK size (bytes): $SIZE"           ''           'Verification: calculate SHA-256 for the downloaded APK and compare it with the value above. Matching values confirm the file is intact and unchanged.'           > dist/ADREEMK-ExpiryGuard-v1.0.4-RELEASE-INFO.txt
         cd dist
         zip -q ADREEMK-ExpiryGuard-v1.0.4-COMMERCIAL.zip           ADREEMK-ExpiryGuard-v1.0.4.apk           ADREEMK-ExpiryGuard-v1.0.4.sha256           ADREEMK-ExpiryGuard-v1.0.4-RELEASE-INFO.txt
 
