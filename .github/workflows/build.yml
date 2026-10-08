@@ -46,19 +46,19 @@ jobs:
       run: |
         set -e
         mkdir -p dist
-        OUT="dist/ADREEMK-ExpiryGuard-v1.0.2.apk"
+        OUT="dist/ADREEMK-ExpiryGuard-v1.0.3.apk"
         cp app/build/outputs/apk/release/app-release.apk "$OUT"
-        sha256sum "$OUT" > dist/ADREEMK-ExpiryGuard-v1.0.2.sha256
-        SHA256=$(cut -d ' ' -f1 dist/ADREEMK-ExpiryGuard-v1.0.2.sha256)
+        sha256sum "$OUT" > dist/ADREEMK-ExpiryGuard-v1.0.3.sha256
+        SHA256=$(cut -d ' ' -f1 dist/ADREEMK-ExpiryGuard-v1.0.3.sha256)
         SIZE=$(stat -c%s "$OUT")
-        printf '%s\n'           'ADREEMK ExpiryGuard'           'Commercial Release Package'           'Version: 1.0.2'           'Application ID: com.aistudio.expiryguard.kspwvx'           'Build type: Release'           'Distribution: Direct APK'           ''           'APK: ADREEMK-ExpiryGuard-v1.0.2.apk'           "SHA-256: $SHA256"           "APK size (bytes): $SIZE"           ''           'Verification: calculate SHA-256 for the downloaded APK and compare it with the value above. Matching values confirm the file is intact and unchanged.'           > dist/ADREEMK-ExpiryGuard-v1.0.2-RELEASE-INFO.txt
+        printf '%s\n'           'ADREEMK ExpiryGuard'           'Commercial Release Package'           'Version: 1.0.2'           'Application ID: com.aistudio.expiryguard.kspwvx'           'Build type: Release'           'Distribution: Direct APK'           ''           'APK: ADREEMK-ExpiryGuard-v1.0.3.apk'           "SHA-256: $SHA256"           "APK size (bytes): $SIZE"           ''           'Verification: calculate SHA-256 for the downloaded APK and compare it with the value above. Matching values confirm the file is intact and unchanged.'           > dist/ADREEMK-ExpiryGuard-v1.0.3-RELEASE-INFO.txt
         cd dist
-        zip -q ADREEMK-ExpiryGuard-v1.0.2-COMMERCIAL.zip           ADREEMK-ExpiryGuard-v1.0.2.apk           ADREEMK-ExpiryGuard-v1.0.2.sha256           ADREEMK-ExpiryGuard-v1.0.2-RELEASE-INFO.txt
+        zip -q ADREEMK-ExpiryGuard-v1.0.3-COMMERCIAL.zip           ADREEMK-ExpiryGuard-v1.0.3.apk           ADREEMK-ExpiryGuard-v1.0.3.sha256           ADREEMK-ExpiryGuard-v1.0.3-RELEASE-INFO.txt
 
     - name: Upload commercial release package
       uses: actions/upload-artifact@v4
       with:
-        name: ADREEMK-ExpiryGuard-v1.0.2
+        name: ADREEMK-ExpiryGuard-v1.0.3
         path: dist/
         if-no-files-found: error
         retention-days: 90
