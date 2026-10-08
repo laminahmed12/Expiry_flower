@@ -446,6 +446,57 @@ export default {
       }
 
       /*
+       * فصل ترخيص جهاز محدد - المالك
+       * لا يحذف الترخيص ولا يلغي الرمز؛ يزيل ربط الجهاز فقط.
+       */
+      if (
+        url.pathname === "/v1/admin/unlink-device" &&
+        request.method === "POST"
+      ) {
+        if (!auth(request, env)) {
+          return json({ ok: false, error: "unauthorized" }, 401);
+        }
+
+        const body = await request.json();
+        const deviceId = String(body.deviceId || "").trim();
+
+        if (!deviceId) {
+          return json({ ok: false, error: "device_required" }, 400);
+        }
+
+        const result = await env.DB
+          .prepare(`
+            UPDATE licenses
+            SET device_id = NULL,
+                activated_at = NULL,
+                last_check_at = ?
+            WHERE device_id = ?
+            AND status = 'active'
+          `)
+          .bind(now(), deviceId)
+          .run();
+
+        await env.DB
+          .prepare(`
+            INSERT INTO audit_logs
+            (action, device_id, details, created_at)
+            VALUES (?, ?, ?, ?)
+          `)
+          .bind(
+            "unlink_device",
+            deviceId,
+            "device license link removed by owner",
+            now()
+          )
+          .run();
+
+        return json({
+          ok: true,
+          unlinked: Number(result.meta?.changes || 0)
+        });
+      }
+
+      /*
        * إنشاء ترخيص جديد - المالك
        */
       if (

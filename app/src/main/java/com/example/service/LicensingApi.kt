@@ -42,6 +42,33 @@ class LicensingApi(private val context: Context) {
         )
     }
 
+    suspend fun unlinkCurrentDevice(ownerPin: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val connection = open("POST", "/v1/admin/unlink-device")
+        return@withContext try {
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.setRequestProperty("X-Owner-Pin", ownerPin.trim())
+            connection.doOutput = true
+            connection.outputStream.use {
+                it.write(
+                    JSONObject()
+                        .put("deviceId", deviceId())
+                        .toString()
+                        .toByteArray(Charsets.UTF_8)
+                )
+            }
+            val body = read(connection)
+            if (connection.responseCode !in 200..299) {
+                Result.failure(IllegalStateException(messageFor(body)))
+            } else {
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     suspend fun check(): Result<CloudLicense> = withContext(Dispatchers.IO) {
         request(
             method = "GET",

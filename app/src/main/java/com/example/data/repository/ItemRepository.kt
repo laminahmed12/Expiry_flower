@@ -310,10 +310,31 @@ class ItemRepository(private val context: Context) {
         }
     }
 
+    suspend fun unlinkCurrentDeviceLicense(ownerPin: String): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        val result = licensingApi.unlinkCurrentDevice(ownerPin)
+        if (result.isSuccess) {
+            prefs.edit()
+                .putBoolean(PREF_IS_ACTIVATED, false)
+                .remove(PREF_ACTIVE_CODE)
+                .remove(PREF_DURATION_MONTHS)
+                .remove(PREF_ACTIVATION_TIMESTAMP)
+                .remove(PREF_LAST_LICENSE_CHECK)
+                .remove(PREF_TRIAL_START)
+                .apply()
+            Pair(true, "تم فصل ترخيص هذا الجهاز وإعادة إتاحة الفترة التجريبية.")
+        } else {
+            Pair(false, result.exceptionOrNull()?.message ?: "تعذر فصل ترخيص الجهاز.")
+        }
+    }
+
     suspend fun resetTrialPeriod() = withContext(Dispatchers.IO) {
         prefs.edit()
             .putBoolean(PREF_IS_ACTIVATED, false)
             .remove(PREF_ACTIVE_CODE)
+            .remove(PREF_DURATION_MONTHS)
+            .remove(PREF_ACTIVATION_TIMESTAMP)
+            .remove(PREF_LAST_LICENSE_CHECK)
+            .remove(PREF_TRIAL_START)
             .apply()
     }
 

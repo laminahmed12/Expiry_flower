@@ -371,7 +371,50 @@ fun AdreemkAdminScreen(
                 }
             }
 
-            // 4. Section Title: All Activation Codes
+            // 4. Secure device-license management
+            item {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.22f)
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.35f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(
+                            text = "فصل ترخيص جهاز الاختبار",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "يفصل الترخيص المرتبط بهذا الجهاز من الخادم فقط، ثم يتيح اختبار الفترة التجريبية من جديد. لا يؤثر على تراخيص العملاء الآخرين.",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.unlinkCurrentDeviceLicense { _, message ->
+                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("unlink_current_device_btn")
+                        ) {
+                            Icon(Icons.Default.Block, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("فصل ترخيص هذا الجهاز")
+                        }
+                    }
+                }
+            }
+
+            // 5. Section Title: All Activation Codes
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

@@ -275,6 +275,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _themeMode.value = mode
     }
 
+    fun unlinkCurrentDeviceLicense(onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            val (success, message) = repository.unlinkCurrentDeviceLicense(ownerCredential)
+            if (success) refreshLicenseStatus()
+            onResult(success, message)
+        }
+    }
+
     fun resetTrialPeriod(onResult: (Boolean, String) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             try {
