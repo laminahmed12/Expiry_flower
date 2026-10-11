@@ -134,20 +134,15 @@ fun AddEditItemScreen(
         }
     }
 
-    // Camera launcher: capture a product photo and save it inside app storage.
+    // Full-resolution camera capture saved in app-private storage.
     val context = LocalContext.current
+    var cameraOutputUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            runCatching {
-                val imageDirectory = java.io.File(context.filesDir, "product_images").apply { mkdirs() }
-                val imageFile = java.io.File(imageDirectory, "product_${System.currentTimeMillis()}.jpg")
-                java.io.FileOutputStream(imageFile).use { output ->
-                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, output)
-                }
-                imageUri = Uri.fromFile(imageFile).toString()
-            }
+        contract = ActivityResultContracts.TakePicture()
+    ) { saved ->
+        val capturedUri = cameraOutputUri
+        if (saved && capturedUri != null) {
+            imageUri = capturedUri.toString()
         }
     }
 
@@ -519,7 +514,22 @@ fun AddEditItemScreen(
                         }
 
                         Button(
-                            onClick = { cameraLauncher.launch(null) },
+                            onClick = {
+                                runCatching {
+                                    val imageDirectory = java.io.File(context.filesDir, "product_images")
+                                        .apply { mkdirs() }
+                                    val imageFile = java.io.File(
+                                        imageDirectory,
+                                        "product_${System.currentTimeMillis()}.jpg"
+                                    )
+                                    cameraOutputUri = androidx.core.content.FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        imageFile
+                                    )
+                                    cameraLauncher.launch(cameraOutputUri)
+                                }
+                            },
                             modifier = Modifier.testTag("capture_product_photo_button")
                         ) {
                             Icon(Icons.Default.AddAPhoto, contentDescription = null, modifier = Modifier.size(16.dp))
