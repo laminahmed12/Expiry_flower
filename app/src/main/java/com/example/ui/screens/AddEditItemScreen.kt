@@ -134,12 +134,20 @@ fun AddEditItemScreen(
         }
     }
 
-    // Photo picker launcher
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            imageUri = uri.toString()
+    // Camera launcher: capture a product photo and save it inside app storage.
+    val context = LocalContext.current
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            runCatching {
+                val imageDirectory = java.io.File(context.filesDir, "product_images").apply { mkdirs() }
+                val imageFile = java.io.File(imageDirectory, "product_${System.currentTimeMillis()}.jpg")
+                java.io.FileOutputStream(imageFile).use { output ->
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, output)
+                }
+                imageUri = Uri.fromFile(imageFile).toString()
+            }
         }
     }
 
@@ -511,13 +519,8 @@ fun AddEditItemScreen(
                         }
 
                         Button(
-                            onClick = {
-                                photoPickerLauncher.launch(
-                                    androidx.activity.result.PickVisualMediaRequest(
-                                        ActivityResultContracts.PickVisualMedia.ImageOnly
-                                    )
-                                )
-                            }
+                            onClick = { cameraLauncher.launch(null) },
+                            modifier = Modifier.testTag("capture_product_photo_button")
                         ) {
                             Icon(Icons.Default.AddAPhoto, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
