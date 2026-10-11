@@ -1,10 +1,13 @@
 package com.example.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -144,6 +147,53 @@ fun AddEditItemScreen(
         val capturedUri = cameraOutputUri
         if (saved && capturedUri != null) {
             imageUri = capturedUri.toString()
+        } else if (!saved) {
+            Toast.makeText(context, "لم يتم التقاط الصورة", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // The app declares CAMERA permission for its barcode scanner. Android therefore
+    // requires that permission to be granted before launching ACTION_IMAGE_CAPTURE.
+    val openProductCamera: () -> Unit = {
+        try {
+            val imageDirectory = java.io.File(context.filesDir, "product_images")
+            if (!imageDirectory.exists() && !imageDirectory.mkdirs()) {
+                error("تعذر إنشاء مجلد صور المنتجات")
+            }
+            val imageFile = java.io.File(
+                imageDirectory,
+                "product_${System.currentTimeMillis()}.jpg"
+            )
+            if (!imageFile.exists() && !imageFile.createNewFile()) {
+                error("تعذر إنشاء ملف الصورة")
+            }
+            val outputUri = androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                imageFile
+            )
+            cameraOutputUri = outputUri
+            cameraLauncher.launch(outputUri)
+        } catch (error: Exception) {
+            Toast.makeText(
+                context,
+                "تعذر فتح الكاميرا: ${error.localizedMessage ?: "خطأ غير معروف"}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            openProductCamera()
+        } else {
+            Toast.makeText(
+                context,
+                "يلزم السماح بإذن الكاميرا لالتقاط صورة المنتج",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -516,31 +566,15 @@ fun AddEditItemScreen(
 
                         Button(
                             onClick = {
-                                try {
-                                    val imageDirectory = java.io.File(context.filesDir, "product_images")
-                                    if (!imageDirectory.exists() && !imageDirectory.mkdirs()) {
-                                        error("تعذر إنشاء مجلد صور المنتجات")
-                                    }
-                                    val imageFile = java.io.File(
-                                        imageDirectory,
-                                        "product_${System.currentTimeMillis()}.jpg"
-                                    )
-                                    if (!imageFile.exists() && !imageFile.createNewFile()) {
-                                        error("تعذر إنشاء ملف الصورة")
-                                    }
-                                    val outputUri = androidx.core.content.FileProvider.getUriForFile(
-                                        context,
-                                        "${context.packageName}.fileprovider",
-                                        imageFile
-                                    )
-                                    cameraOutputUri = outputUri
-                                    cameraLauncher.launch(outputUri)
-                                } catch (error: Exception) {
-                                    Toast.makeText(
-                                        context,
-                                        "تعذر فتح الكاميرا: ${error.localizedMessage ?: "خطأ غير معروف"}",
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                                val permissionGranted = ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.CAMERA
+                                ) == PackageManager.PERMISSION_GRANTED
+
+                                if (permissionGranted) {
+                                    openProductCamera()
+                                } else {
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                                 }
                             },
                             modifier = Modifier.testTag("capture_product_photo_button")
