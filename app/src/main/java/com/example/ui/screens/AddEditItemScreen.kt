@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -515,13 +516,18 @@ fun AddEditItemScreen(
 
                         Button(
                             onClick = {
-                                runCatching {
+                                try {
                                     val imageDirectory = java.io.File(context.filesDir, "product_images")
-                                        .apply { mkdirs() }
+                                    if (!imageDirectory.exists() && !imageDirectory.mkdirs()) {
+                                        error("تعذر إنشاء مجلد صور المنتجات")
+                                    }
                                     val imageFile = java.io.File(
                                         imageDirectory,
                                         "product_${System.currentTimeMillis()}.jpg"
                                     )
+                                    if (!imageFile.exists() && !imageFile.createNewFile()) {
+                                        error("تعذر إنشاء ملف الصورة")
+                                    }
                                     val outputUri = androidx.core.content.FileProvider.getUriForFile(
                                         context,
                                         "${context.packageName}.fileprovider",
@@ -529,13 +535,19 @@ fun AddEditItemScreen(
                                     )
                                     cameraOutputUri = outputUri
                                     cameraLauncher.launch(outputUri)
+                                } catch (error: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        "تعذر فتح الكاميرا: ${error.localizedMessage ?: "خطأ غير معروف"}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
                             },
                             modifier = Modifier.testTag("capture_product_photo_button")
                         ) {
                             Icon(Icons.Default.AddAPhoto, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (imageUri != null) "تغيير الصورة" else "اختيار صورة للمنتج")
+                            Text("التقاط صورة")
                         }
                     }
                 }
