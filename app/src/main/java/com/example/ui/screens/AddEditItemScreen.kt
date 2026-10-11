@@ -522,12 +522,13 @@ fun AddEditItemScreen(
                                         imageDirectory,
                                         "product_${System.currentTimeMillis()}.jpg"
                                     )
-                                    cameraOutputUri = androidx.core.content.FileProvider.getUriForFile(
+                                    val outputUri = androidx.core.content.FileProvider.getUriForFile(
                                         context,
                                         "${context.packageName}.fileprovider",
                                         imageFile
                                     )
-                                    cameraLauncher.launch(cameraOutputUri)
+                                    cameraOutputUri = outputUri
+                                    cameraLauncher.launch(outputUri)
                                 }
                             },
                             modifier = Modifier.testTag("capture_product_photo_button")
